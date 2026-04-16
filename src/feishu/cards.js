@@ -30,6 +30,8 @@ function statusTemplate(status) {
       return 'red';
     case 'running':
       return 'orange';
+    case 'cancelled':
+      return 'orange';
     default:
       return 'blue';
   }
@@ -40,11 +42,17 @@ function authDescription(runtime) {
 }
 
 function buildSummaryLines(runtime) {
-  return [
+  const lines = [
     section('Workspace', `\`${runtime.workspace}\``),
     section('Model', runtime.model ? `\`${runtime.model}\`` : 'default'),
     section('Auth', authDescription(runtime))
   ];
+
+  if (runtime.activeTaskCount) {
+    lines.push(section('Active task', `\`${runtime.activeTask?.prompt || 'unknown'}\``));
+  }
+
+  return lines;
 }
 
 function makeToggleAction({ cardId, expanded }) {
@@ -87,6 +95,18 @@ function buildReplyCard({
       template
     },
     elements
+  };
+}
+
+function makeCancelAction(taskId) {
+  return {
+    tag: 'button',
+    text: plainText('Cancel'),
+    type: 'danger',
+    value: {
+      fcoding_action: 'cancel_task',
+      task_id: taskId
+    }
   };
 }
 
@@ -144,6 +164,24 @@ export function buildCommandResultCard({
   });
 }
 
+export function buildRunningTaskCard({
+  task,
+  runtime,
+  taskId,
+  elapsed = ''
+}) {
+  return buildReplyCard({
+    title: 'FCoding task running',
+    template: 'orange',
+    bodyLines: [
+      section('Prompt', `\`${task.prompt}\``),
+      ...(elapsed ? [section('Elapsed', elapsed)] : []),
+      ...buildSummaryLines(runtime)
+    ],
+    actions: taskId ? [makeCancelAction(taskId)] : []
+  });
+}
+
 export function buildTaskStatusCard({
   task,
   runtime,
@@ -151,9 +189,11 @@ export function buildTaskStatusCard({
   cardId,
   expanded = false
 }) {
-  const template = statusTemplate(result.ok ? 'success' : result.timedOut ? 'error' : 'error');
+  const template = statusTemplate(result.ok ? 'success' : result.cancelled ? 'cancelled' : 'error');
   const statusLine = result.ok
     ? `Completed in ${(Math.max(0, result.durationMs || 0) / 1000).toFixed(1)}s`
+    : result.cancelled
+      ? `Cancelled after ${(Math.max(0, result.durationMs || 0) / 1000).toFixed(1)}s`
     : result.timedOut
       ? `Timed out after ${(Math.max(0, result.durationMs || 0) / 1000).toFixed(1)}s`
       : `Failed after ${(Math.max(0, result.durationMs || 0) / 1000).toFixed(1)}s`;
@@ -177,7 +217,11 @@ export function buildTaskStatusCard({
   }
 
   return buildReplyCard({
-    title: result.ok ? 'FCoding task finished' : 'FCoding task failed',
+    title: result.ok
+      ? 'FCoding task finished'
+      : result.cancelled
+        ? 'FCoding task cancelled'
+        : 'FCoding task failed',
     template,
     bodyLines,
     actions: cardId

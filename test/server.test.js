@@ -88,9 +88,78 @@ test('sends periodic Codex progress replies while a task is running', async () =
     logger: { error() {} }
   });
 
-  assert.equal(cards[0].card.header.title.content, 'FCoding task accepted');
+  assert.equal(cards[0].card.header.title.content, 'FCoding task running');
   assert.ok(cards.some((entry) => entry.card.header.title.content === 'FCoding task running'));
   assert.equal(cards.at(-1).card.header.title.content, 'FCoding task finished');
+});
+
+test('cancels an active Codex task from a command prompt', async () => {
+  const cards = [];
+  const config = makeConfig();
+  const runtimeState = createRuntimeState({ config });
+  let runnerSignal;
+  let resolveRunner;
+  const runnerDone = new Promise((resolve) => {
+    resolveRunner = resolve;
+  });
+
+  const slowTask = processCodexTask({
+    task: {
+      eventId: 'evt-slow',
+      messageId: 'msg-slow',
+      prompt: 'slow task'
+    },
+    config,
+    runtimeState,
+    feishuClient: {
+      async replyInteractiveCard(messageId, card) {
+        cards.push({ messageId, card });
+      }
+    },
+    codexRunner: async ({ signal }) => {
+      runnerSignal = signal;
+      await new Promise((resolve) => signal.addEventListener('abort', resolve, { once: true }));
+      resolveRunner();
+      return {
+        ok: false,
+        cancelled: true,
+        output: '',
+        error: 'Codex task cancelled',
+        durationMs: 10
+      };
+    },
+    logger: { error() {} }
+  });
+
+  while (!runnerSignal) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  await processCodexTask({
+    task: {
+      eventId: 'evt-cancel',
+      messageId: 'msg-cancel',
+      prompt: 'cancel'
+    },
+    config,
+    runtimeState,
+    feishuClient: {
+      async replyInteractiveCard(messageId, card) {
+        cards.push({ messageId, card });
+      }
+    },
+    codexRunner: async () => {
+      throw new Error('cancel command should not run codex');
+    },
+    logger: { error() {} }
+  });
+
+  await runnerDone;
+  await slowTask;
+
+  assert.equal(runnerSignal.aborted, true);
+  assert.ok(cards.some((entry) => entry.card.header.title.content === 'FCoding task cancel requested'));
+  assert.equal(cards.at(-1).card.header.title.content, 'FCoding task cancelled');
 });
 
 test('handles built-in command prompts before running codex', async () => {
@@ -170,7 +239,7 @@ test('accepts a message and processes it asynchronously', async () => {
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { ok: true, accepted: true });
     await done;
-    assert.equal(cards[0].card.header.title.content, 'FCoding task accepted');
+    assert.equal(cards[0].card.header.title.content, 'FCoding task running');
     assert.equal(cards[1].card.header.title.content, 'FCoding task finished');
   });
 });

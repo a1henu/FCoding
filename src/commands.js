@@ -61,7 +61,8 @@ function helpDetails() {
     '`codex model`',
     '`codex model set <name>`',
     '`codex login`',
-    '`codex login status`'
+    '`codex login status`',
+    '`codex cancel`'
   ];
 }
 
@@ -91,6 +92,28 @@ export async function handleBotCommand({
       card: buildStatusCard({
         runtime,
         loginStatus: await getCodexLoginStatus({ logger })
+      })
+    };
+  }
+
+  if (command === 'cancel') {
+    const cancelled = runtimeState.cancelActiveTask();
+    if (!cancelled) {
+      return {
+        handled: true,
+        card: buildCommandResultCard({
+          title: 'FCoding task cancel',
+          summary: 'No active Codex task is currently running.'
+        })
+      };
+    }
+
+    return {
+      handled: true,
+      card: buildCommandResultCard({
+        title: 'FCoding task cancel requested',
+        status: 'running',
+        summary: `Cancellation requested for \`${cancelled.prompt}\`.`
       })
     };
   }

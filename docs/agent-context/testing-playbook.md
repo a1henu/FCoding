@@ -151,6 +151,7 @@ Check:
 - callback `value` contains enough routing info
 - no secrets or full prompts are embedded unnecessarily
 - repeated clicks have a defined behavior
+- running task cards preserve the `cancel_task` value and task ID when cancellation is available
 
 ## Codex Runner Changes
 
@@ -175,6 +176,7 @@ Check:
 - non-zero exit
 - spawn error
 - timeout
+- abort cancellation
 - large output truncation
 - prompt remains the final child process argument unless intentionally changed
 - runtime-state options still append model args before the prompt
@@ -186,6 +188,7 @@ Examples:
 - `src/commands.js`
 - `src/runtime-state.js`
 - workspace/model command behavior
+- cancel command behavior
 - output card state and TTL
 
 Minimum verification:
@@ -202,6 +205,7 @@ Check:
 - model override appends expected Codex args
 - FCoding remains ChatGPT-login only and does not inject API provider config
 - card state can retrieve stored task output for expand/collapse
+- active task state can cancel a registered task and clear it after completion
 
 ## Shared Task Orchestration
 
@@ -225,6 +229,7 @@ Check:
 
 - Feishu event handler returns quickly
 - progress timer stops on success and failure
+- active task state is cleared on success, failure, and cancellation
 - failures still attempt a Feishu reply
 - duplicate events do not run Codex twice
 - built-in commands do not start Codex

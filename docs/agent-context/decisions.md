@@ -44,11 +44,21 @@ Implication: Production deployments should set at least one allowlist. Changing 
 
 Status: decided by current implementation
 
-Reason: `runCodexTask()` spawns a child process, captures stdout/stderr, and resolves only on process close/error/timeout. Runtime commands can alter options before the run, but the runner still does not parse streaming JSON events or write to stdin.
+Reason: `runCodexTask()` spawns a child process, captures stdout/stderr, and resolves only on process close/error/timeout/cancellation. Runtime commands can alter options before the run, but the runner still does not parse streaming JSON events or write to stdin.
 
 Evidence: `src/codex/runner.js`.
 
 Implication: Feishu choice/permission interactions require a new protocol or a different Codex integration path; do not bolt UI cards onto the current runner without designing the process interaction.
+
+## Active Task Cancellation Uses AbortSignal
+
+Status: decided by current implementation
+
+Reason: `processCodexTask()` registers each running Codex task in `runtimeState` with an `AbortController`; `runCodexTask()` accepts `signal` and kills the child process when aborted.
+
+Evidence: `src/server.js`, `src/runtime-state.js`, `src/codex/runner.js`, `src/feishu/ws.js`, `test/server.test.js`, `test/codex-runner.test.js`.
+
+Implication: `codex cancel` cancels the most recent active task, while running-card Cancel buttons cancel by task ID. Future multi-user/session work must avoid cross-user cancellation mistakes.
 
 ## Built-In Commands Are Handled Before Codex
 
@@ -64,7 +74,7 @@ Implication: User messages such as `codex status` do not run Codex. Command name
 
 Status: decided by current implementation
 
-Reason: `createRuntimeState()` stores workspace/model overrides and card state in process memory.
+Reason: `createRuntimeState()` stores workspace/model overrides, active task entries, and card state in process memory.
 
 Evidence: `src/runtime-state.js`, `test/runtime-state.test.js`.
 

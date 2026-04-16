@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   buildCallbackTestCard,
   buildCommandResultCard,
+  buildRunningTaskCard,
   buildTaskStatusCard
 } from '../src/feishu/cards.js';
 
@@ -48,4 +49,21 @@ test('builds a collapsible task status card', () => {
   assert.equal(card.header.title.content, 'FCoding task finished');
   assert.equal(card.elements.at(-1).actions[0].value.fcoding_action, 'expand_output');
   assert.match(card.elements[0].text.content, /Preview/);
+});
+
+test('builds a running task card with cancel action', () => {
+  const card = buildRunningTaskCard({
+    task: { prompt: 'slow task' },
+    runtime: {
+      workspace: '/tmp/work',
+      model: 'gpt-5',
+      authMode: 'chatgpt'
+    },
+    taskId: 'task-1',
+    elapsed: '3s'
+  });
+
+  assert.equal(card.header.title.content, 'FCoding task running');
+  assert.equal(card.elements.at(-1).actions[0].value.fcoding_action, 'cancel_task');
+  assert.equal(card.elements.at(-1).actions[0].value.task_id, 'task-1');
 });

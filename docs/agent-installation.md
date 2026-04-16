@@ -133,6 +133,7 @@ Expected:
 
 - The bot replies with an `FCoding status` card.
 - The card shows workspace, model, auth mode, and Codex login status.
+- While a task is running, the running card includes a Cancel button; `codex cancel` cancels the most recent active task.
 
 Then run a real Codex task:
 
@@ -179,9 +180,10 @@ codex model set <name>
 codex model clear
 codex login
 codex login use chatgpt
+codex cancel
 ```
 
-FCoding always uses the local Codex ChatGPT login. There is no API-key login mode inside FCoding. Runtime commands change in-memory state only; restarting the service resets workspace/model overrides and expires old result-card expand/collapse state.
+FCoding always uses the local Codex ChatGPT login. There is no API-key login mode inside FCoding. Runtime commands change in-memory state only; restarting the service resets workspace/model overrides, removes active task cancellation state, and expires old result-card expand/collapse state.
 
 ## Production Notes
 

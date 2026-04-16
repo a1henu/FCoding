@@ -25,7 +25,9 @@ export function createRuntimeState({
     model: env.FCODING_MODEL || ''
   };
   const cards = new Map();
+  const activeTasks = new Map();
   let cardCounter = 0;
+  let taskCounter = 0;
 
   function pruneCards() {
     const current = now();
@@ -37,7 +39,18 @@ export function createRuntimeState({
   }
 
   function snapshot() {
-    return cloneSnapshot(state);
+    const activeTaskList = Array.from(activeTasks.values()).map((entry) => ({
+      id: entry.id,
+      eventId: entry.task.eventId,
+      messageId: entry.task.messageId,
+      prompt: entry.task.prompt,
+      startedAt: entry.startedAt
+    }));
+    return {
+      ...cloneSnapshot(state),
+      activeTaskCount: activeTaskList.length,
+      activeTask: activeTaskList.at(-1) || null
+    };
   }
 
   function createCardState(type, payload) {
@@ -84,6 +97,34 @@ export function createRuntimeState({
     },
     createCardState,
     getCardState,
+    registerActiveTask(task, cancel) {
+      const id = `fcoding-task-${now()}-${++taskCounter}`;
+      activeTasks.set(id, {
+        id,
+        task,
+        cancel,
+        startedAt: now()
+      });
+      return id;
+    },
+    finishActiveTask(taskId) {
+      activeTasks.delete(taskId);
+    },
+    cancelActiveTask(taskId) {
+      const entry = taskId ? activeTasks.get(taskId) : Array.from(activeTasks.values()).at(-1);
+      if (!entry) {
+        return null;
+      }
+
+      entry.cancel?.();
+      return {
+        id: entry.id,
+        eventId: entry.task.eventId,
+        messageId: entry.task.messageId,
+        prompt: entry.task.prompt,
+        startedAt: entry.startedAt
+      };
+    },
     buildCodexRunOptions(baseCodexConfig) {
       const args = [...baseCodexConfig.args];
       const childEnv = { ...env };

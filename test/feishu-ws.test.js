@@ -162,7 +162,7 @@ test('WS dispatcher schedules Codex work and returns quickly', async () => {
   await dispatcher.invoke(wsEnvelope());
   await done;
 
-  assert.equal(cards[0].card.header.title.content, 'FCoding task accepted');
+  assert.equal(cards[0].card.header.title.content, 'FCoding task running');
   assert.equal(cards[1].card.header.title.content, 'FCoding task finished');
 });
 
@@ -226,6 +226,29 @@ test('card action handler expands stored task output cards', async () => {
 
   assert.equal(response.header.title.content, 'FCoding task finished');
   assert.match(response.elements[0].text.content, /full output/);
+});
+
+test('card action handler cancels active tasks', async () => {
+  let cancelled = false;
+  const runtimeState = createRuntimeState({ config: makeConfig() });
+  const taskId = runtimeState.registerActiveTask(
+    { eventId: 'evt-cancel', messageId: 'msg-cancel', prompt: 'slow task' },
+    () => {
+      cancelled = true;
+    }
+  );
+  const handler = createCardActionTriggerHandler({
+    logger: { info() {} },
+    runtimeState
+  });
+
+  const response = await handler({
+    operator: { open_id: 'ou-1' },
+    action: { value: { fcoding_action: 'cancel_task', task_id: taskId } }
+  });
+
+  assert.equal(cancelled, true);
+  assert.equal(response.header.title.content, 'FCoding task cancel requested');
 });
 
 test('WS dispatcher routes card action callbacks through the official card handler', async () => {

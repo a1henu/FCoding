@@ -19,13 +19,30 @@ export async function runCodexTask({
   cwd = process.cwd(),
   timeoutMs = 10 * 60 * 1000,
   maxOutputChars = 12000,
-  env = process.env
+  env = process.env,
+  signal
 }) {
   const startedAt = Date.now();
   const childArgs = [...args, prompt];
   let stdout = '';
   let stderr = '';
   let timedOut = false;
+  let cancelled = false;
+
+  if (signal?.aborted) {
+    return {
+      ok: false,
+      output: '',
+      stdout: '',
+      stderr: '',
+      error: 'Codex task cancelled',
+      exitCode: null,
+      signal: null,
+      timedOut: false,
+      cancelled: true,
+      durationMs: Date.now() - startedAt
+    };
+  }
 
   return new Promise((resolve) => {
     let settled = false;
@@ -56,8 +73,22 @@ export async function runCodexTask({
       if (killTimer) {
         clearTimeout(killTimer);
       }
+      signal?.removeEventListener?.('abort', abortChild);
       resolve(result);
     }
+
+    function abortChild() {
+      if (settled) {
+        return;
+      }
+
+      cancelled = true;
+      child.kill('SIGTERM');
+      killTimer = setTimeout(() => child.kill('SIGKILL'), 5000);
+      killTimer.unref?.();
+    }
+
+    signal?.addEventListener?.('abort', abortChild, { once: true });
 
     child.stdout?.on('data', (chunk) => {
       stdout += chunk.toString('utf8');
@@ -77,6 +108,7 @@ export async function runCodexTask({
         exitCode: null,
         signal: null,
         timedOut,
+        cancelled,
         durationMs: Date.now() - startedAt
       });
     });
@@ -84,14 +116,19 @@ export async function runCodexTask({
     child.once('close', (exitCode, signal) => {
       const combined = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n\n');
       finish({
-        ok: exitCode === 0 && !timedOut,
+        ok: exitCode === 0 && !timedOut && !cancelled,
         output: truncateText(combined, maxOutputChars),
         stdout: truncateText(stdout, maxOutputChars),
         stderr: truncateText(stderr, maxOutputChars),
-        error: timedOut ? `Codex timed out after ${timeoutMs}ms` : '',
+        error: cancelled
+          ? 'Codex task cancelled'
+          : timedOut
+            ? `Codex timed out after ${timeoutMs}ms`
+            : '',
         exitCode,
         signal,
         timedOut,
+        cancelled,
         durationMs: Date.now() - startedAt
       });
     });
@@ -106,7 +143,9 @@ export function formatCodexResult(result) {
     return `Codex finished in ${seconds}s.\n\n${output}`;
   }
 
-  const status = result.timedOut
+  const status = result.cancelled
+    ? 'cancelled'
+    : result.timedOut
     ? 'timed out'
     : `failed with exit code ${result.exitCode ?? 'unknown'}`;
   const error = result.error ? `\n\n${result.error}` : '';

@@ -34,11 +34,11 @@ These areas affect multiple modules or user-visible behavior.
 
 - `src/commands.js`
   - User-facing runtime command protocol.
-  - Commands bypass Codex and can change workspace/model behavior.
+  - Commands bypass Codex and can change workspace/model behavior or cancel an active task.
 
 - `src/runtime-state.js`
-  - In-memory runtime overrides and temporary card state.
-  - Changes can invalidate card callbacks or real Codex command options.
+  - In-memory runtime overrides, active task cancellation, and temporary card state.
+  - Changes can invalidate card callbacks, cancellation, or real Codex command options.
 
 - `src/dotenv.js` and `src/index.js` dotenv loading
   - Startup secret file behavior.
@@ -53,7 +53,7 @@ These areas affect multiple modules or user-visible behavior.
   - Token cache bugs can cause repeated failures.
 
 - `src/codex/runner.js`
-  - External process behavior can hang, timeout incorrectly, or run wrong args.
+  - External process behavior can hang, ignore cancellation, timeout incorrectly, or run wrong args.
 
 - `.github/workflows/test.yml`
   - CI signal for every push and pull request.
@@ -80,7 +80,7 @@ Do not edit these concurrently without explicit ownership.
 
 - `src/server.js#processCodexTask`
   - Shared by WS and HTTP paths.
-  - Controls built-in commands, ack, progress, Codex run, final reply, card state, and failure reporting.
+  - Controls built-in commands, ack, progress, active task registration, Codex run, final reply, card state, cancellation, and failure reporting.
 
 - `src/feishu/events.js#extractCodexTask`
   - Security boundary for who can trigger Codex.

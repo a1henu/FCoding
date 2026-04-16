@@ -10,7 +10,7 @@ Core runtime flow:
 2. Feishu message events are parsed and filtered by `src/feishu/events.js`.
 3. Accepted text messages become Codex tasks.
 4. `src/server.js#processCodexTask` handles built-in FCoding commands before invoking Codex.
-5. Runtime overrides such as workspace, model, auth mode, and output-card state live in `src/runtime-state.js`.
+5. Runtime state such as workspace/model overrides, active Codex tasks, and output-card state live in `src/runtime-state.js`.
 6. Codex output and progress are sent as interactive Feishu cards through `src/feishu/client.js`.
 7. Interactive card callbacks are handled in `src/feishu/ws.js` and card payloads live in `src/feishu/cards.js`.
 
@@ -35,7 +35,7 @@ Core runtime flow:
 - Long connection behavior: `src/feishu/ws.js`.
 - HTTP callback behavior: `src/server.js`.
 - Built-in bot commands: `src/commands.js`.
-- Runtime session state and Codex run overrides: `src/runtime-state.js`.
+- Runtime session state, active task cancellation, and Codex run overrides: `src/runtime-state.js`.
 - Local env loading: `src/dotenv.js`; startup loads `.env`.
 - Feishu task extraction and allowlists: `src/feishu/events.js`.
 - Feishu outbound API calls: `src/feishu/client.js`.
@@ -95,7 +95,8 @@ Use `npm start` only when you need to run the local service. It reads `.env` and
 - Does every changed runtime behavior have a test?
 - Are built-in commands documented and covered by server/runtime-state tests?
 - Did message/task parsing still reject unsupported event types and non-text messages?
-- Did Codex execution still handle success, failure, timeout, and output truncation?
+- Did Codex execution still handle success, failure, timeout, cancellation, and output truncation?
+- Did task cancellation still work from both `codex cancel` and running-card `cancel_task` callbacks?
 - Does the change avoid blocking Feishu callbacks on long-running Codex work?
 - Did `npm test`, `git diff --check`, and any relevant smoke checks pass? If CI config changed, did `.github/workflows/test.yml` still run the intended commands?
 - Are docs updated when user setup, event subscriptions, env vars, or operational behavior changed?

@@ -66,6 +66,22 @@ export function createCardActionTriggerHandler({
       });
     }
 
+    if (value.fcoding_action === 'cancel_task') {
+      const cancelled = runtimeState?.cancelActiveTask(value.task_id);
+      if (!cancelled) {
+        return buildCommandResultCard({
+          title: 'FCoding task cancel',
+          summary: 'This task is no longer running.'
+        });
+      }
+
+      return buildCommandResultCard({
+        title: 'FCoding task cancel requested',
+        status: 'running',
+        summary: `Cancellation requested for \`${cancelled.prompt}\`.`
+      });
+    }
+
     return buildCallbackReceivedCard({
       action: value.fcoding_action || 'unknown',
       receivedAt: new Date().toISOString()

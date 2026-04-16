@@ -12,6 +12,7 @@ import {
 } from './feishu/events.js';
 import {
   buildCommandResultCard,
+  buildRunningTaskCard,
   buildTaskStatusCard
 } from './feishu/cards.js';
 
@@ -102,14 +103,11 @@ export function startProgressReplies({
     try {
       await feishuClient.replyInteractiveCard(
         task.messageId,
-        buildCommandResultCard({
-          title: 'FCoding task running',
-          status: 'running',
-          summary: `Codex is still working on \`${task.prompt}\`.`,
-          details: [
-            `Elapsed: ${formatElapsed(now() - startedAt)}`,
-            `Workspace: \`${runtimeState.snapshot().workspace}\``
-          ]
+        buildRunningTaskCard({
+          task,
+          runtime: runtimeState.snapshot(),
+          taskId: task.activeTaskId,
+          elapsed: formatElapsed(now() - startedAt)
         })
       );
     } catch (error) {
@@ -136,6 +134,7 @@ export async function processCodexTask({
   logger
 }) {
   let stopProgressReplies = () => {};
+  let activeTaskId = null;
 
   try {
     const commandResult = await handleBotCommand({ task, runtimeState, logger });
@@ -144,17 +143,17 @@ export async function processCodexTask({
       return;
     }
 
+    const abortController = new AbortController();
+    activeTaskId = runtimeState.registerActiveTask(task, () => abortController.abort());
+    task.activeTaskId = activeTaskId;
+
     if (config.feishu.sendAck) {
       await feishuClient.replyInteractiveCard(
         task.messageId,
-        buildCommandResultCard({
-          title: 'FCoding task accepted',
-          status: 'running',
-          summary: `Working on \`${task.prompt}\`.`,
-          details: [
-            `Workspace: \`${runtimeState.snapshot().workspace}\``,
-            `Model: ${runtimeState.snapshot().model ? `\`${runtimeState.snapshot().model}\`` : 'default'}`
-          ]
+        buildRunningTaskCard({
+          task,
+          runtime: runtimeState.snapshot(),
+          taskId: activeTaskId
         })
       );
     }
@@ -169,9 +168,12 @@ export async function processCodexTask({
 
     const result = await codexRunner({
       prompt: task.prompt,
+      signal: abortController.signal,
       ...runtimeState.buildCodexRunOptions(config.codex)
     });
     stopProgressReplies();
+    runtimeState.finishActiveTask(activeTaskId);
+    activeTaskId = null;
 
     const cardId = runtimeState.createCardState('task_result', {
       task,
@@ -189,6 +191,9 @@ export async function processCodexTask({
     );
   } catch (error) {
     stopProgressReplies();
+    if (activeTaskId) {
+      runtimeState.finishActiveTask(activeTaskId);
+    }
     logger.error({ error, eventId: task.eventId }, 'Codex task failed');
     try {
       await feishuClient.replyInteractiveCard(

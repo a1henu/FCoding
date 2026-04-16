@@ -43,3 +43,24 @@ test('stores card state for later expansion', () => {
     payload: { task: { prompt: 'hi' } }
   });
 });
+
+test('tracks and cancels active tasks', () => {
+  let cancelled = false;
+  const runtime = createRuntimeState({ config: makeConfig(), env: {} });
+  const taskId = runtime.registerActiveTask(
+    { eventId: 'evt-1', messageId: 'msg-1', prompt: 'slow task' },
+    () => {
+      cancelled = true;
+    }
+  );
+
+  assert.equal(runtime.snapshot().activeTaskCount, 1);
+  assert.equal(runtime.snapshot().activeTask.prompt, 'slow task');
+
+  const task = runtime.cancelActiveTask(taskId);
+  assert.equal(task.prompt, 'slow task');
+  assert.equal(cancelled, true);
+
+  runtime.finishActiveTask(taskId);
+  assert.equal(runtime.snapshot().activeTaskCount, 0);
+});

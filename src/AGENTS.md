@@ -8,10 +8,10 @@
 
 - `index.js`: starts WS or HTTP mode based on `FEISHU_EVENT_MODE`.
 - `config.js`: parses env vars and owns runtime defaults.
-- `commands.js`: handles built-in FCoding commands such as `status`, `workspace`, `model`, and `login`.
+- `commands.js`: handles built-in FCoding commands such as `status`, `workspace`, `model`, `login`, and `cancel`.
 - `dotenv.js`: local `.env` loader.
 - `index.js` loads `.env` before config/runtime state are created.
-- `runtime-state.js`: in-memory runtime overrides and card state.
+- `runtime-state.js`: in-memory runtime overrides, active task cancellation state, and card state.
 - `server.js`: HTTP server plus shared `processCodexTask`.
 - `feishu/`: Feishu-specific integration.
 - `codex/`: Codex process execution.
@@ -35,7 +35,7 @@
 
 - Changing `processCodexTask`; it is shared by WS and HTTP paths.
 - Changing `handleBotCommand`; command prompts bypass Codex and affect user-visible bot behavior.
-- Changing `runtime-state.js`; it controls workspace/model overrides and card output expansion state.
+- Changing `runtime-state.js`; it controls workspace/model overrides, active task cancellation, and card output expansion state.
 - Changing config defaults in `config.js`; `.env.example`, README, and agent docs may need updates.
 - Changing dotenv loading; this affects local secret handling.
 - Changing startup mode selection in `index.js`; this can break local long connection operation.
@@ -47,6 +47,7 @@
 - Config changes: `node --test test/config.test.js test/dotenv.test.js`.
 - Dotenv loading changes: `node --test test/dotenv.test.js test/runtime-state.test.js`.
 - Command/runtime-state changes: `node --test test/runtime-state.test.js test/server.test.js test/feishu-ws.test.js`.
+- Cancellation changes: `node --test test/codex-runner.test.js test/runtime-state.test.js test/server.test.js test/feishu-ws.test.js`.
 - HTTP server changes: `node --test test/server.test.js`.
 - Shared task orchestration changes: `node --test test/server.test.js test/feishu-ws.test.js test/codex-runner.test.js`.
 

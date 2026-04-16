@@ -71,6 +71,7 @@ For card callbacks:
 3. `createCardActionTriggerHandler()` reads `data.action.value`.
 4. `callback_test` returns a card from `buildCallbackReceivedCard()`.
 5. `expand_output` and `collapse_output` load a stored `task_result` card state from `runtimeState` and rebuild the task status card.
+6. `cancel_task` cancels an active Codex task by task ID through `runtimeState.cancelActiveTask()`.
 
 Important coupling: card callback smoke tests depend on `src/feishu/cards.js`, `src/feishu/ws.js`, Feishu console subscription to `card.action.trigger`, and the SDK patch for `type=card` frames.
 
@@ -92,12 +93,13 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 
 1. Calls `handleBotCommand()` before running Codex.
 2. If a built-in command is handled, sends that command's result card and returns.
-3. Otherwise sends an accepted interactive card when `FEISHU_SEND_ACK=true`.
-4. Starts periodic progress cards through `startProgressReplies()`.
-5. Calls the configured Codex runner with `runtimeState.buildCodexRunOptions(config.codex)`.
-6. Stops progress replies.
-7. Stores final task output in runtime card state and sends a collapsed task status card.
-8. On pre-completion errors, tries to report failure with an interactive card.
+3. Otherwise registers the task in runtime state with an `AbortController`.
+4. Sends a running interactive card with a Cancel button when `FEISHU_SEND_ACK=true`.
+5. Starts periodic progress cards through `startProgressReplies()`.
+6. Calls the configured Codex runner with `runtimeState.buildCodexRunOptions(config.codex)` plus `signal`.
+7. Stops progress replies and removes active task state.
+8. Stores final task output in runtime card state and sends a collapsed task status card.
+9. On pre-completion errors, tries to report failure with an interactive card.
 
 `src/codex/runner.js` executes the external process:
 
@@ -107,12 +109,13 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - runtime state may override `cwd` or append `-m <model>`
 - `shell: false`
 - timeout sends SIGTERM, then SIGKILL after 5 seconds
+- cancellation through `AbortSignal` sends SIGTERM, then SIGKILL after 5 seconds
 - combined stdout/stderr is truncated from the middle
 
 ## Module Relationships
 
 - `commands.js` handles built-in runtime commands before Codex is invoked.
-- `runtime-state.js` stores in-memory workspace/model settings and temporary card state.
+- `runtime-state.js` stores in-memory workspace/model settings, active task cancellation state, and temporary card state.
 - `config.js` influences almost every runtime module. It is the only place env defaults should be introduced.
 - `events.js` is the security gate for who can run Codex.
 - `server.js` is both HTTP runtime and shared task orchestrator.
@@ -127,9 +130,10 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - `BOT_TRIGGER_PREFIX=codex` strips exactly the prefix after mentions are removed.
 - Current task orchestration now primarily uses `replyInteractiveCard(messageId, card)` for ack/progress/final/error replies.
 - Built-in commands use `task.prompt` after `BOT_TRIGGER_PREFIX` removal, so users send `codex status` but `handleBotCommand()` receives `status`.
+- `codex cancel` cancels the most recent active task; running-card Cancel buttons cancel by task ID through `card.action.trigger`.
 - `replyInteractiveCard()` sends `msg_type: interactive` and `content: JSON.stringify(card)`.
 - `updateInteractiveCard()` sends `PATCH /im/v1/messages/:message_id`; it is implemented and tested, but current expand/collapse callbacks return replacement cards through callback response rather than calling the client method.
-- Runtime card state is in memory and expires after 24 hours by default. Restarting the process invalidates old output expand/collapse cards.
+- Runtime card state and active task state are in memory. Restarting the process invalidates old output expand/collapse cards and removes the ability to cancel already-spawned tasks through FCoding state.
 - `patchWsClientCardCallbacks()` relies on installed SDK internals: `wsClient.handleEventData`, `wsClient.dataCache.mergeData`, `wsClient.eventDispatcher`, and `wsClient.sendMessage`.
 - Feishu card callbacks require console subscription to `card.action.trigger`. A healthy long-connection socket is not sufficient.
 
@@ -140,6 +144,7 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - Change Feishu outbound reply behavior: start in `src/feishu/client.js`, then `test/feishu-client.test.js`.
 - Change long connection/card callbacks: start in `src/feishu/ws.js`, `src/feishu/cards.js`, `test/feishu-ws.test.js`, and `test/feishu-cards.test.js`.
 - Change built-in commands: start in `src/commands.js`, `src/runtime-state.js`, `src/server.js`, `test/runtime-state.test.js`, and `test/server.test.js`.
+- Change task cancellation: start in `src/server.js`, `src/runtime-state.js`, `src/codex/runner.js`, `src/feishu/ws.js`, and card tests.
 - Change Codex execution: start in `src/codex/runner.js`, then `test/codex-runner.test.js`.
 - Change progress/ack/final reply orchestration: start in `src/server.js`, then `test/server.test.js` and `test/feishu-ws.test.js`.
 - Change CI: start in `.github/workflows/test.yml`, then verify with `npm test` locally and inspect `package.json` scripts.

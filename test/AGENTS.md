@@ -8,8 +8,8 @@
 
 - `config.test.js`: env parsing and defaults.
 - `dotenv.test.js`: local `.env` loader behavior.
-- `codex-runner.test.js`: child process execution, failures, timeout, truncation.
-- `runtime-state.test.js`: runtime workspace/model overrides and card state.
+- `codex-runner.test.js`: child process execution, failures, timeout, cancellation, truncation.
+- `runtime-state.test.js`: runtime workspace/model overrides, active task state, and card state.
 - `feishu-client.test.js`: outbound API calls with mocked fetch.
 - `feishu-crypto.test.js`: HTTP callback signature/decryption.
 - `feishu-events.test.js`: payload parsing, mention stripping, allowlists, dedupe.
