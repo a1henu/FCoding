@@ -209,6 +209,7 @@ cython_debug/
 # Codex local state
 .codex
 .codex/
+start_codex.sh
 
 # Marimo
 marimo/_static/
