@@ -66,16 +66,18 @@ Use `npm start` only when you need to run the local service. It reads `.env` and
 - When changing Feishu event parsing, consider both WS mode and HTTP mode.
 - When changing card callbacks, remember Feishu must subscribe to `card.action.trigger`; a healthy WS connection alone is not enough.
 - Keep `.github/workflows/test.yml` aligned with `package.json` scripts. CI currently runs only `npm test`.
+- Any code change that affects behavior, user-visible flows, configuration, commands, integration contracts, risks, or test expectations must update the corresponding nearest `AGENTS.md` and the relevant docs under `docs/`. Documentation and code must stay consistent in the same commit.
 
 ## Change Workflow
 
 1. Read the nearest `AGENTS.md` plus relevant files listed there.
 2. Check `git status --short`.
 3. Make a focused change with matching tests.
-4. Run the minimum targeted tests for the touched module, then run `npm test` before finalizing.
-5. Run `git diff --check`.
-6. Inspect staged diff for secrets before committing.
-7. Commit focused slices. Push only after tests pass and the worktree contains no unintended changes.
+4. If the change affects functionality, update the nearest `AGENTS.md` and relevant `docs/` files before considering the change complete.
+5. Run the minimum targeted tests for the touched module, then run `npm test` before finalizing.
+6. Run `git diff --check`.
+7. Inspect staged diff for secrets and doc/code drift before committing.
+8. Commit focused slices. Push only after tests pass and the worktree contains no unintended changes.
 
 ## Parallel Work Guidance
 
@@ -96,3 +98,4 @@ Use `npm start` only when you need to run the local service. It reads `.env` and
 - Does the change avoid blocking Feishu callbacks on long-running Codex work?
 - Did `npm test`, `git diff --check`, and any relevant smoke checks pass? If CI config changed, did `.github/workflows/test.yml` still run the intended commands?
 - Are docs updated when user setup, event subscriptions, env vars, or operational behavior changed?
+- For every behavior-changing code diff, is the corresponding nearest `AGENTS.md` still accurate, and are relevant docs in `docs/` updated in the same commit?
