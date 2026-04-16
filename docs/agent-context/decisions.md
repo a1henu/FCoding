@@ -1,0 +1,111 @@
+# Decisions
+
+## Long Connection Is The Default Inbound Mode
+
+Status: decided
+
+Reason: The target user does not have a public HTTPS service. Feishu long connection works from a local machine with outbound internet access.
+
+Evidence: `FEISHU_EVENT_MODE=ws` is the `.env.example` default; `README.md` presents long connection as the default; `src/index.js` supports `ws` and `http`.
+
+Implication: New setup docs and default tests should prioritize WS mode. HTTP mode should remain tested but not drive the user onboarding path.
+
+## HTTP Webhook Mode Remains Supported
+
+Status: decided
+
+Reason: Existing code and tests support URL verification, signature verification, encrypted payloads, and HTTP callback handling.
+
+Evidence: `src/server.js`, `src/feishu/crypto.js`, and `test/server.test.js`.
+
+Implication: Shared parsing changes must not silently break HTTP mode.
+
+## `.env` Is The Local Secret Boundary
+
+Status: decided
+
+Reason: Feishu app credentials and local runtime settings are sensitive and environment-specific.
+
+Evidence: `.gitignore` ignores `.env` and `.env.*`; `.env.example` is tracked as safe template; `src/dotenv.js` loads `.env` at startup.
+
+Implication: Agents must never commit real `.env` values or print app secrets.
+
+## Empty Allowlists Mean Allow All For That Identifier Type
+
+Status: inferred
+
+Reason: `isAllowed(value, allowedValues)` returns true when `allowedValues.length === 0`.
+
+Evidence: `src/feishu/events.js`.
+
+Implication: Production deployments should set at least one allowlist. Changing this behavior is a breaking access-control change requiring docs and tests.
+
+## Codex Runner Is Non-Interactive
+
+Status: decided by current implementation
+
+Reason: `runCodexTask()` spawns a child process, captures stdout/stderr, and resolves only on process close/error/timeout. It does not parse streaming JSON events or write to stdin.
+
+Evidence: `src/codex/runner.js`.
+
+Implication: Feishu choice/permission interactions require a new protocol or a different Codex integration path; do not bolt UI cards onto the current runner without designing the process interaction.
+
+## Codex Prompt Is Appended As Final Argument
+
+Status: decided by current implementation
+
+Reason: `childArgs = [...args, prompt]`.
+
+Evidence: `src/codex/runner.js`; `test/codex-runner.test.js`.
+
+Implication: `CODEX_ARGS` should contain flags before the prompt. Changing order can break Codex CLI invocation.
+
+## Unsupported Codex Approval Flag Was Removed
+
+Status: decided
+
+Reason: Installed `codex exec` rejected `--ask-for-approval`.
+
+Evidence: README and docs warn to check `codex exec --help`; previous working default is `exec --skip-git-repo-check --sandbox workspace-write`.
+
+Implication: Do not reintroduce approval flags without verifying the installed CLI.
+
+## Feishu Card Callback Requires Explicit Subscription
+
+Status: decided from observed behavior
+
+Reason: Long connection can be healthy and message events can work while card clicks still fail with `200340` if `card.action.trigger` is not subscribed.
+
+Evidence: Real local smoke test: after subscribing `card.action.trigger`, logs showed `eventType: 'card.action.trigger'` and card action values.
+
+Implication: Setup docs must always include `card.action.trigger` for interactive features.
+
+## Installed Feishu SDK Needed A Card Frame Patch
+
+Status: inferred from installed SDK and tests
+
+Reason: The installed SDK's `WSClient.handleEventData` only dispatches frames where header `type` is `event`. Card callback frames can arrive with `type=card`.
+
+Evidence: `src/feishu/ws.js#patchWsClientCardCallbacks`; `test/feishu-ws.test.js` covers card frames.
+
+Implication: Treat the patch as high-risk. Revisit it when upgrading `@larksuiteoapi/node-sdk`.
+
+## Event Handlers Should Return Quickly
+
+Status: decided
+
+Reason: Feishu callbacks can retry or show user-facing errors when handlers block. Codex tasks can run much longer than callback windows.
+
+Evidence: WS path uses `setImmediate()` before `processCodexTask`; HTTP path sends response before scheduling Codex.
+
+Implication: Do not await long Codex runs inside Feishu event callback handlers.
+
+## Tests Use Node's Built-In Test Runner
+
+Status: decided
+
+Reason: `package.json` script is `node --test`; tests use `node:test` and `node:assert/strict`.
+
+Evidence: all files in `test/`.
+
+Implication: Avoid introducing a new test framework unless there is a strong reason.
