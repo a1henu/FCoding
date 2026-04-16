@@ -5,8 +5,6 @@ const DEFAULT_CODEX_ARGS = [
   '--skip-git-repo-check',
   '--sandbox',
   'workspace-write',
-  '--ask-for-approval',
-  'never'
 ];
 
 export function parseBoolean(value, defaultValue = false) {

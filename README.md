@@ -44,7 +44,7 @@ Important variables:
 - `BOT_TRIGGER_PREFIX`: optional text prefix after the bot mention. With `codex`, a message like `@Bot codex run tests` sends `run tests` to Codex.
 - `ALLOWED_OPEN_IDS`, `ALLOWED_USER_IDS`, `ALLOWED_CHAT_IDS`: comma-separated allowlists. Keep at least one allowlist in production.
 - `CODEX_WORKDIR`: repository directory where Codex should work.
-- `CODEX_ARGS`: arguments placed before the prompt. The default is `exec --skip-git-repo-check --sandbox workspace-write --ask-for-approval never`.
+- `CODEX_ARGS`: arguments placed before the prompt. The default is `exec --skip-git-repo-check --sandbox workspace-write`.
 
 ## Run Locally
 
