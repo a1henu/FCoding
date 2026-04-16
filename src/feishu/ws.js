@@ -75,6 +75,75 @@ function normalizeCardPayloadForSdk(data) {
   };
 }
 
+function parseWsHeaders(headers = []) {
+  return headers.reduce((acc, item) => {
+    acc[item.key] = item.value;
+    return acc;
+  }, {});
+}
+
+function encodeWsPayload(payload) {
+  return new TextEncoder().encode(JSON.stringify(payload));
+}
+
+function decodeWsResultData(result) {
+  return Buffer.from(JSON.stringify(result)).toString('base64');
+}
+
+async function handleWsCallbackData(wsClient, data, headers, logger) {
+  const { message_id: messageId, sum, seq, trace_id: traceId, type } = headers;
+  const mergedData = wsClient.dataCache.mergeData({
+    message_id: messageId,
+    sum: Number(sum),
+    seq: Number(seq),
+    trace_id: traceId,
+    data: data.payload
+  });
+
+  if (!mergedData) {
+    return;
+  }
+
+  logger.info?.({ type, messageId, traceId }, 'Received Feishu WS frame');
+  const responsePayload = {
+    code: 200
+  };
+  const startTime = Date.now();
+
+  try {
+    const result = await wsClient.eventDispatcher?.invoke(mergedData, { needCheck: false });
+    if (result) {
+      responsePayload.data = decodeWsResultData(result);
+    }
+  } catch (error) {
+    responsePayload.code = 500;
+    logger.error?.({ error, type, messageId, traceId }, 'Failed to handle Feishu WS frame');
+  }
+
+  const durationMs = Date.now() - startTime;
+  wsClient.sendMessage({
+    ...data,
+    headers: [...data.headers, { key: 'biz_rt', value: String(durationMs) }],
+    payload: encodeWsPayload(responsePayload)
+  });
+}
+
+export function patchWsClientCardCallbacks(wsClient, { logger = console } = {}) {
+  const originalHandleEventData = wsClient.handleEventData?.bind(wsClient);
+
+  wsClient.handleEventData = async (data) => {
+    const headers = parseWsHeaders(data?.headers);
+
+    if (headers.type !== 'card') {
+      return originalHandleEventData?.(data);
+    }
+
+    return handleWsCallbackData(wsClient, data, headers, logger);
+  };
+
+  return wsClient;
+}
+
 export function createWsEventDispatcher({
   config,
   feishuClient,
@@ -155,6 +224,8 @@ export async function startWsEventClient({
     appSecret: config.feishu.appSecret,
     loggerLevel: lark.LoggerLevel?.info
   });
+
+  patchWsClientCardCallbacks(wsClient, { logger });
 
   await wsClient.start({
     eventDispatcher: createWsEventDispatcher({

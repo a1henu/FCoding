@@ -5,6 +5,7 @@ import {
   createCardActionTriggerHandler,
   createWsEventDispatcher,
   normalizeWsMessageEvent,
+  patchWsClientCardCallbacks,
   startWsEventClient
 } from '../src/feishu/ws.js';
 
@@ -241,6 +242,75 @@ test('WS dispatcher adds empty headers for legacy card callback payloads', async
   });
 
   assert.deepEqual(FakeCardActionHandler.last.invocations[0].headers, {});
+});
+
+test('patches Feishu WS client to dispatch card callback frames', async () => {
+  const invocations = [];
+  const sent = [];
+  const wsClient = {
+    dataCache: {
+      mergeData({ data }) {
+        return JSON.parse(new TextDecoder().decode(data));
+      }
+    },
+    eventDispatcher: {
+      async invoke(data, params) {
+        invocations.push({ data, params });
+        return { header: { template: 'green' }, elements: [] };
+      }
+    },
+    sendMessage(data) {
+      sent.push(data);
+    },
+    async handleEventData() {
+      throw new Error('card frames should not use the original event handler');
+    }
+  };
+
+  patchWsClientCardCallbacks(wsClient, { logger: { info() {}, error() {} } });
+
+  await wsClient.handleEventData({
+    headers: [
+      { key: 'type', value: 'card' },
+      { key: 'message_id', value: 'card-msg-1' },
+      { key: 'sum', value: '1' },
+      { key: 'seq', value: '0' },
+      { key: 'trace_id', value: 'trace-1' }
+    ],
+    payload: new TextEncoder().encode(JSON.stringify({
+      action: { value: { fcoding_action: 'callback_test' } }
+    }))
+  });
+
+  assert.equal(invocations.length, 1);
+  assert.deepEqual(invocations[0].params, { needCheck: false });
+  assert.equal(invocations[0].data.action.value.fcoding_action, 'callback_test');
+  assert.equal(sent.length, 1);
+
+  const response = JSON.parse(new TextDecoder().decode(sent[0].payload));
+  assert.equal(response.code, 200);
+  assert.equal(
+    JSON.parse(Buffer.from(response.data, 'base64').toString()).header.template,
+    'green'
+  );
+});
+
+test('patched Feishu WS client keeps normal event frames on the SDK handler', async () => {
+  let originalCalled = false;
+  const wsClient = {
+    async handleEventData(data) {
+      originalCalled = data.headers[0].value === 'event';
+    }
+  };
+
+  patchWsClientCardCallbacks(wsClient, { logger: { info() {}, error() {} } });
+
+  await wsClient.handleEventData({
+    headers: [{ key: 'type', value: 'event' }],
+    payload: new TextEncoder().encode('{}')
+  });
+
+  assert.equal(originalCalled, true);
 });
 
 test('starts the official Feishu WS client with an event dispatcher', async () => {
