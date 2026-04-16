@@ -145,7 +145,7 @@ Expected:
 
 - The bot replies with an accepted card.
 - The bot later replies with a task result card.
-- If output is long enough, the card can be expanded/collapsed.
+- If output is long enough, the card can be expanded/collapsed and paged with Next/Previous.
 
 Then test card callbacks:
 

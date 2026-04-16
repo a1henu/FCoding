@@ -110,6 +110,16 @@ Evidence: `src/codex/runner.js` sets `stdio: ['ignore', 'pipe', 'pipe']`; `test/
 
 Implication: Do not remove stdin ignore unless replacing the runner with an explicit streaming protocol that owns stdin writes and EOF behavior.
 
+## Full Codex Output Is Stored For Paginated Cards
+
+Status: decided by current implementation
+
+Reason: Feishu cards cannot safely display arbitrarily long output in one callback response, and truncating `result.output` made Show output lose content.
+
+Evidence: `src/codex/runner.js` returns `fullOutput`; `src/feishu/cards.js` paginates expanded output; `src/feishu/ws.js` passes callback `page`; tests cover full-output preservation and page navigation payloads.
+
+Implication: `result.output` is a preview/display field and may be truncated. Use `result.fullOutput ?? result.output` for user-visible full output. Large outputs are kept in process memory until runtime card state expires.
+
 ## Unsupported Codex Approval Flag Was Removed
 
 Status: decided

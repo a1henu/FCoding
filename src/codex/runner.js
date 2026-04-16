@@ -33,8 +33,11 @@ export async function runCodexTask({
     return {
       ok: false,
       output: '',
+      fullOutput: '',
       stdout: '',
+      fullStdout: '',
       stderr: '',
+      fullStderr: '',
       error: 'Codex task cancelled',
       exitCode: null,
       signal: null,
@@ -103,8 +106,11 @@ export async function runCodexTask({
       finish({
         ok: false,
         output: '',
+        fullOutput: '',
         stdout: '',
+        fullStdout: '',
         stderr: '',
+        fullStderr: '',
         error: error.message,
         exitCode: null,
         signal: null,
@@ -119,8 +125,11 @@ export async function runCodexTask({
       finish({
         ok: exitCode === 0 && !timedOut && !cancelled,
         output: truncateText(combined, maxOutputChars),
+        fullOutput: combined,
         stdout: truncateText(stdout, maxOutputChars),
+        fullStdout: stdout,
         stderr: truncateText(stderr, maxOutputChars),
+        fullStderr: stderr,
         error: cancelled
           ? 'Codex task cancelled'
           : timedOut

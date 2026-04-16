@@ -67,7 +67,7 @@ The default runtime is Feishu long connection through `@larksuiteoapi/node-sdk`.
   - Mostly relevant to HTTP webhook mode.
 
 - `src/feishu/cards.js`
-  - Builds callback test cards, command result cards, status cards, model selection cards, running task cards with Cancel buttons, and task result cards with output expand/collapse buttons.
+  - Builds callback test cards, command result cards, status cards, model selection cards, running task cards with Cancel buttons, and task result cards with paginated output expand/collapse buttons.
 
 - `src/feishu/ws.js`
   - Starts the official Feishu `WSClient`.
@@ -95,6 +95,7 @@ HTTP mode is optional. The default user journey should use long connection becau
   - Ignores child stdin so `codex exec` does not wait forever for extra piped input.
   - Appends the extracted prompt.
   - Captures stdout/stderr.
+  - Keeps `fullOutput` for paginated Feishu cards while keeping `output` as a bounded preview field.
   - Accepts `AbortSignal` cancellation and terminates the child process.
   - Enforces timeout.
   - Formats results for Feishu replies.
@@ -148,7 +149,7 @@ Command behavior lives in `src/commands.js`; state lives in `src/runtime-state.j
 7. `processCodexTask()` first asks `handleBotCommand()` whether the prompt is an FCoding command.
 8. For Codex tasks, `processCodexTask()` registers active task state, sends a running card with a Cancel button, starts periodic progress cards, runs Codex with an abort signal, stops progress, stores result card state, and replies with a collapsed result card.
 9. `card.action.trigger` is routed to the SDK `CardActionHandler`.
-10. Model selection buttons update runtime model state; expand/collapse card buttons use runtime card state to rebuild task result cards; Cancel buttons abort active Codex tasks by task ID.
+10. Model selection buttons update runtime model state; expand/collapse card buttons use runtime card state to rebuild paginated task result cards; Cancel buttons abort active Codex tasks by task ID.
 
 ## Callback Test Command
 
@@ -171,7 +172,7 @@ If Feishu shows `200340`, first check Feishu subscriptions. The app must subscri
 
 - `test/config.test.js`: config parsing.
 - `test/dotenv.test.js`: local `.env` loading.
-- `test/codex-runner.test.js`: Codex process execution, cancellation, and formatting.
+- `test/codex-runner.test.js`: Codex process execution, cancellation, full-output preservation, and formatting.
 - `test/runtime-state.test.js`: runtime workspace/model options, active task state, and card state.
 - `test/feishu-client.test.js`: Feishu API client behavior.
 - `test/feishu-crypto.test.js`: signature and encryption logic.
@@ -192,7 +193,7 @@ npm test
 - Preserve `.env` secrecy.
 - Do not commit local runtime files such as `.env`, `.env.*`, `.codex`, or `node_modules`.
 - When touching Feishu event parsing, update both long connection and HTTP tests if behavior overlaps.
-- When touching Codex command execution, test success, failure, stdin EOF behavior, timeout, cancellation, and output truncation.
+- When touching Codex command execution, test success, failure, stdin EOF behavior, timeout, cancellation, output truncation, and full-output preservation.
 - When touching callback cards, test both payload shape and long-connection callback dispatch.
 - When touching runtime commands or state, test command handling, runtime run options, and card callback behavior.
 - If a behavior depends on current Feishu or Codex SDK details, inspect the installed package or official docs before changing it.

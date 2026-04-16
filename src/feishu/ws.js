@@ -56,13 +56,17 @@ export function createCardActionTriggerHandler({
       if (!state || state.type !== 'task_result') {
         return buildExpiredCardStateCard();
       }
+      const outputPage = Number.isInteger(Number(value.page))
+        ? Number(value.page)
+        : 0;
 
       return buildTaskStatusCard({
         task: state.payload.task,
         runtime: runtimeState.snapshot(),
         result: state.payload.result,
         cardId: value.card_id,
-        expanded: value.fcoding_action === 'expand_output'
+        expanded: value.fcoding_action === 'expand_output',
+        outputPage
       });
     }
 

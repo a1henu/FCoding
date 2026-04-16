@@ -9,7 +9,7 @@ This directory owns all Feishu-specific behavior: inbound event parsing, long co
 - `ws.js`: long connection dispatcher, card callback routing, SDK card-frame patch.
 - `events.js`: Feishu payload parsing, mention stripping, allowlists, task extraction, dedupe.
 - `client.js`: tenant token cache and reply APIs.
-- `cards.js`: interactive card builders for command results, model selection cards, running task cancel cards, task status, callback tests, and expandable output cards.
+- `cards.js`: interactive card builders for command results, model selection cards, running task cancel cards, task status, callback tests, and paginated expandable output cards.
 - `crypto.js`: HTTP webhook signature verification and encrypted payload decryption.
 
 ## Internal Dependencies
@@ -29,7 +29,7 @@ This directory owns all Feishu-specific behavior: inbound event parsing, long co
 ## High-Risk Changes
 
 - Editing `patchWsClientCardCallbacks` or `handleWsCallbackData` in `ws.js`; this compensates for installed SDK behavior where `type=card` frames are not dispatched by default.
-- Editing model selection, expand/collapse, or cancel card callback handling; model selection mutates runtime model state, expand/collapse depends on `runtimeState.getCardState()`, and cancel depends on active task state.
+- Editing model selection, output pagination, expand/collapse, or cancel card callback handling; model selection mutates runtime model state, output pagination depends on stored `fullOutput`, expand/collapse depends on `runtimeState.getCardState()`, and cancel depends on active task state.
 - Editing `extractCodexTask`; it controls who can trigger local Codex execution.
 - Editing allowlist semantics; empty allowlists currently mean "allow all" for that identifier type.
 - Editing `replyText` splitting or `replyInteractiveCard`; incorrect Feishu reply payloads are user-visible.

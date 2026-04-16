@@ -6,7 +6,7 @@ This directory owns the boundary between FCoding and the local Codex CLI process
 
 ## Key Entry File
 
-- `runner.js`: spawns Codex with stdin ignored, appends the prompt, captures stdout/stderr, handles abort cancellation, enforces timeout, truncates output, and formats final Feishu reply text.
+- `runner.js`: spawns Codex with stdin ignored, appends the prompt, captures stdout/stderr, keeps full output for paginated cards, handles abort cancellation, enforces timeout, truncates preview output, and formats final Feishu reply text.
 
 ## Internal Dependencies
 
@@ -17,7 +17,7 @@ This directory owns the boundary between FCoding and the local Codex CLI process
 
 ## Safer Changes
 
-- Adjusting output formatting when tests cover success and failure.
+- Adjusting output formatting when tests cover success, failure, truncation, and full-output preservation.
 - Adding structured result fields while preserving existing callers.
 - Adding more timeout/cancellation/truncation tests.
 - Adding support for runtime options if `test/runtime-state.test.js` and `test/codex-runner.test.js` cover the contract.

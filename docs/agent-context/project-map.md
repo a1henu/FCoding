@@ -70,7 +70,7 @@ For card callbacks:
 2. The dispatcher routes card payloads to `CardActionHandler`.
 3. `createCardActionTriggerHandler()` reads `data.action.value`.
 4. `callback_test` returns a card from `buildCallbackReceivedCard()`.
-5. `expand_output` and `collapse_output` load a stored `task_result` card state from `runtimeState` and rebuild the task status card.
+5. `expand_output` and `collapse_output` load a stored `task_result` card state from `runtimeState` and rebuild the task status card; expanded output is paginated by callback `page`.
 6. `cancel_task` cancels an active Codex task by task ID through `runtimeState.cancelActiveTask()`.
 7. `set_model` sets or clears the in-memory model override through `runtimeState.setModel()` or `runtimeState.clearModel()`.
 
@@ -112,7 +112,8 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - stdin is ignored so `codex exec` does not wait forever for additional piped input
 - timeout sends SIGTERM, then SIGKILL after 5 seconds
 - cancellation through `AbortSignal` sends SIGTERM, then SIGKILL after 5 seconds
-- combined stdout/stderr is truncated from the middle
+- combined stdout/stderr is preserved as `fullOutput` for paginated cards
+- `output`, `stdout`, and `stderr` are truncated preview/display fields
 
 ## Module Relationships
 
@@ -137,7 +138,7 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - Model selection card callbacks use `fcoding_action: set_model` and directly mutate in-memory runtime state.
 - `replyInteractiveCard()` sends `msg_type: interactive` and `content: JSON.stringify(card)`.
 - `updateInteractiveCard()` sends `PATCH /im/v1/messages/:message_id`; it is implemented and tested, but current expand/collapse callbacks return replacement cards through callback response rather than calling the client method.
-- Runtime card state and active task state are in memory. Restarting the process invalidates old output expand/collapse cards and removes the ability to cancel already-spawned tasks through FCoding state.
+- Runtime card state and active task state are in memory. Restarting the process invalidates old output expand/collapse cards and removes the ability to cancel already-spawned tasks through FCoding state. Very large `fullOutput` values stay in memory until card state expires.
 - `patchWsClientCardCallbacks()` relies on installed SDK internals: `wsClient.handleEventData`, `wsClient.dataCache.mergeData`, `wsClient.eventDispatcher`, and `wsClient.sendMessage`.
 - Feishu card callbacks require console subscription to `card.action.trigger`. A healthy long-connection socket is not sufficient.
 

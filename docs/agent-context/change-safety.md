@@ -39,7 +39,7 @@ These areas affect multiple modules or user-visible behavior.
 
 - `src/runtime-state.js`
   - In-memory runtime overrides, active task cancellation, and temporary card state.
-  - Changes can invalidate card callbacks, cancellation, or real Codex command options.
+  - Changes can invalidate card callbacks, paginated output state, cancellation, or real Codex command options.
 
 - `src/dotenv.js` and `src/index.js` dotenv loading
   - Startup secret file behavior.
@@ -54,7 +54,7 @@ These areas affect multiple modules or user-visible behavior.
   - Token cache bugs can cause repeated failures.
 
 - `src/codex/runner.js`
-  - External process behavior can hang, ignore cancellation, timeout incorrectly, or run wrong args.
+  - External process behavior can hang, lose full output, ignore cancellation, timeout incorrectly, or run wrong args.
 
 - `.github/workflows/test.yml`
   - CI signal for every push and pull request.

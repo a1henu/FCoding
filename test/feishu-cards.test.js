@@ -75,6 +75,32 @@ test('builds a collapsible task status card', () => {
   assert.match(card.elements[0].text.content, /Preview/);
 });
 
+test('builds paginated expanded output cards from full output', () => {
+  const card = buildTaskStatusCard({
+    task: { prompt: 'explain' },
+    runtime: {
+      workspace: '/tmp/work',
+      model: 'gpt-5',
+      authMode: 'chatgpt'
+    },
+    result: {
+      ok: true,
+      output: 'short preview',
+      fullOutput: `${'a'.repeat(3500)}second-page`,
+      durationMs: 1200
+    },
+    cardId: 'card-1',
+    expanded: true,
+    outputPage: 1
+  });
+
+  const body = card.elements[0].text.content;
+  assert.match(body, /Output page 2\/2/);
+  assert.match(body, /second-page/);
+  assert.equal(card.elements.at(-1).actions[0].value.fcoding_action, 'collapse_output');
+  assert.equal(card.elements.at(-1).actions[1].text.content, 'Previous');
+});
+
 test('builds a running task card with cancel action', () => {
   const card = buildRunningTaskCard({
     task: { prompt: 'slow task' },

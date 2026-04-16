@@ -80,6 +80,20 @@ test('truncates large output from the middle', () => {
   assert.match(truncated, /output truncated/);
 });
 
+test('keeps full output alongside truncated display output', async () => {
+  const result = await runCodexTask({
+    prompt: '',
+    command: '/usr/bin/printf',
+    args: ['%s', 'abcdefghij'],
+    maxOutputChars: 6,
+    timeoutMs: 1000
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.fullOutput, 'abcdefghij');
+  assert.notEqual(result.output, result.fullOutput);
+});
+
 test('formats successful and failed results for Feishu replies', () => {
   assert.match(formatCodexResult({ ok: true, durationMs: 1000, output: 'done' }), /done/);
   assert.match(

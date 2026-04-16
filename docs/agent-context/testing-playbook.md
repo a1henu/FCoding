@@ -136,6 +136,7 @@ Examples:
 - command result cards
 - model selection cards
 - task result cards with output expand/collapse
+- paginated full output cards
 - permission buttons
 - choice cards
 - callback values
@@ -153,6 +154,7 @@ Check:
 - no secrets or full prompts are embedded unnecessarily
 - repeated clicks have a defined behavior
 - model selection cards preserve `set_model` values and include a clear/default option
+- expanded output pages include `page` routing and do not require the entire output in one card
 - running task cards preserve the `cancel_task` value and task ID when cancellation is available
 
 ## Codex Runner Changes
@@ -181,6 +183,7 @@ Check:
 - timeout
 - abort cancellation
 - large output truncation
+- full output is preserved separately when display output is truncated
 - prompt remains the final child process argument unless intentionally changed
 - runtime-state options still append model args before the prompt
 

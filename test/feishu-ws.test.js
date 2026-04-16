@@ -212,7 +212,7 @@ test('card action handler expands stored task output cards', async () => {
   const runtimeState = createRuntimeState({ config: makeConfig() });
   const cardId = runtimeState.createCardState('task_result', {
     task: { prompt: 'fix tests' },
-    result: { ok: true, output: 'full output', durationMs: 1200 }
+    result: { ok: true, output: 'preview', fullOutput: `${'a'.repeat(3500)}full output`, durationMs: 1200 }
   });
   const handler = createCardActionTriggerHandler({
     logger: { info() {} },
@@ -221,10 +221,11 @@ test('card action handler expands stored task output cards', async () => {
 
   const response = await handler({
     operator: { open_id: 'ou-1' },
-    action: { value: { fcoding_action: 'expand_output', card_id: cardId } }
+    action: { value: { fcoding_action: 'expand_output', card_id: cardId, page: 1 } }
   });
 
   assert.equal(response.header.title.content, 'FCoding task finished');
+  assert.match(response.elements[0].text.content, /Output page 2\/2/);
   assert.match(response.elements[0].text.content, /full output/);
 });
 

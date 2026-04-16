@@ -22,6 +22,8 @@ function section(label, value) {
   return `**${label}:** ${value}`;
 }
 
+const OUTPUT_PAGE_CHARS = 3500;
+
 function statusTemplate(status) {
   switch (status) {
     case 'success':
@@ -55,14 +57,30 @@ function buildSummaryLines(runtime) {
   return lines;
 }
 
-function makeToggleAction({ cardId, expanded }) {
+function makeOutputAction({ cardId, action, text, page = 0 }) {
   return {
     tag: 'button',
-    text: plainText(expanded ? 'Hide output' : 'Show output'),
+    text: plainText(text),
     value: {
-      fcoding_action: expanded ? 'collapse_output' : 'expand_output',
-      card_id: cardId
+      fcoding_action: action,
+      card_id: cardId,
+      page
     }
+  };
+}
+
+function getResultOutput(result) {
+  return result.fullOutput ?? result.output ?? '';
+}
+
+function getOutputPage(output, page) {
+  const pageCount = Math.max(1, Math.ceil(output.length / OUTPUT_PAGE_CHARS));
+  const safePage = Math.min(Math.max(0, page), pageCount - 1);
+  const start = safePage * OUTPUT_PAGE_CHARS;
+  return {
+    page: safePage,
+    pageCount,
+    text: output.slice(start, start + OUTPUT_PAGE_CHARS)
   };
 }
 
@@ -237,7 +255,8 @@ export function buildTaskStatusCard({
   runtime,
   result,
   cardId,
-  expanded = false
+  expanded = false,
+  outputPage = 0
 }) {
   const template = statusTemplate(result.ok ? 'success' : result.cancelled ? 'cancelled' : 'error');
   const statusLine = result.ok
@@ -257,13 +276,56 @@ export function buildTaskStatusCard({
     bodyLines.push(section('Error', result.error));
   }
 
+  const fullOutput = getResultOutput(result);
+  const page = getOutputPage(fullOutput, outputPage);
+
   if (expanded) {
-    bodyLines.push('', '**Output**', '```text', result.output || '(no output)', '```');
-  } else if (result.output) {
-    const preview = result.output.length > 220
-      ? `${result.output.slice(0, 220).trimEnd()}...`
-      : result.output;
+    bodyLines.push(
+      '',
+      `**Output page ${page.page + 1}/${page.pageCount}**`,
+      '```text',
+      page.text || '(no output)',
+      '```'
+    );
+  } else if (fullOutput) {
+    const preview = fullOutput.length > 220
+      ? `${fullOutput.slice(0, 220).trimEnd()}...`
+      : fullOutput;
     bodyLines.push('', section('Preview', `\`${preview.replace(/\n/g, ' ')}\``));
+  }
+
+  const actions = [];
+  if (cardId && expanded) {
+    actions.push(makeOutputAction({
+      cardId,
+      action: 'collapse_output',
+      text: 'Hide output',
+      page: page.page
+    }));
+
+    if (page.page > 0) {
+      actions.push(makeOutputAction({
+        cardId,
+        action: 'expand_output',
+        text: 'Previous',
+        page: page.page - 1
+      }));
+    }
+
+    if (page.page < page.pageCount - 1) {
+      actions.push(makeOutputAction({
+        cardId,
+        action: 'expand_output',
+        text: 'Next',
+        page: page.page + 1
+      }));
+    }
+  } else if (cardId) {
+    actions.push(makeOutputAction({
+      cardId,
+      action: 'expand_output',
+      text: 'Show output'
+    }));
   }
 
   return buildReplyCard({
@@ -274,9 +336,7 @@ export function buildTaskStatusCard({
         : 'FCoding task failed',
     template,
     bodyLines,
-    actions: cardId
-      ? [makeToggleAction({ cardId, expanded })]
-      : []
+    actions
   });
 }
 
