@@ -36,16 +36,7 @@ function statusTemplate(status) {
 }
 
 function authDescription(runtime) {
-  if (runtime.authMode === 'chatgpt') {
-    return 'ChatGPT login';
-  }
-
-  const source = runtime.apiKeySource === 'missing'
-    ? 'key missing'
-    : runtime.apiKeySource === 'in_memory'
-      ? 'key staged in memory'
-      : `key via ${runtime.apiKeyEnvVar}`;
-  return `API key mode (${source})`;
+  return 'ChatGPT login';
 }
 
 function buildSummaryLines(runtime) {

@@ -8,11 +8,11 @@ The repository has a working baseline:
 - Direct message flow works through `im.message.receive_v1`.
 - Card callback smoke test works after subscribing `card.action.trigger`.
 - HTTP webhook mode has tests but is not the primary deployment path.
-- Codex execution is still process-based, but runtime options can now be adjusted from Feishu commands before a task runs.
-- Built-in commands now cover help/status/workspace/model/login configuration flows.
+- Codex execution is still process-based, but workspace/model runtime options can now be adjusted from Feishu commands before a task runs.
+- Built-in commands now cover help/status/workspace/model/login status flows. Login is informational because FCoding always relies on the local Codex ChatGPT login.
 - Final task results are sent as cards with output expand/collapse callbacks backed by in-memory runtime card state.
 - GitHub Actions runs `npm ci` and `npm test` on push and pull request.
-- Tests are fast and local: currently 51 Node tests.
+- Tests are fast and local: currently 47 Node tests.
 - Agent-facing installation and project overview docs exist.
 
 The next phase is better suited to tightening runtime command behavior and interaction state before deeper Codex streaming/permission work. Avoid broad refactors until command/state contracts are stable.
@@ -81,7 +81,7 @@ Goal:
 
 - Make allowlist setup clearer and safer for production.
 - Possibly support first-run ID discovery without leaving allowlists open.
-- Review runtime commands that can switch workspace/model/auth settings.
+- Review runtime commands that can switch workspace/model settings.
 
 Coordination:
 
@@ -138,7 +138,7 @@ Use explicit file ownership in prompts. Avoid assigning two workers to the same 
 
 ## Near-Term Priorities
 
-1. Document and harden built-in runtime commands, especially workspace and auth switching.
+1. Document and harden built-in runtime commands, especially workspace/model switching and login status reporting.
 2. Add retry-safe behavior for repeated card actions if Feishu retry/double-click becomes a problem.
 3. Define an internal representation for true Codex streaming, choices, and permission prompts.
 4. Harden access control defaults or first-run setup guidance before wider deployment.

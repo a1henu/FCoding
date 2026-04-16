@@ -72,18 +72,6 @@ CODEX_ARGS=exec --skip-git-repo-check --sandbox workspace-write
 CODEX_PROGRESS_INTERVAL_MS=30000
 ```
 
-Optional API-mode startup defaults should go in ignored `.env.api`, not tracked docs or source files:
-
-```dotenv
-FCODING_AUTH_MODE=api
-FCODING_MODEL=gpt-5.4-xhigh
-FCODING_API_BASE_URL=https://yunwu.ai/v1
-FCODING_API_KEY_ENV_VAR=OPENAI_API_KEY
-OPENAI_API_KEY=sk-...
-```
-
-`src/index.js` loads `.env` first and `.env.api` second. Existing shell env values still win, and values from `.env` are not overwritten by `.env.api`.
-
 For a private single-user setup, add allowlists after the first successful message reveals the user's IDs in logs or event payloads:
 
 ```dotenv
@@ -191,24 +179,9 @@ codex model set <name>
 codex model clear
 codex login
 codex login use chatgpt
-codex login use api
-codex login base-url set <url>
-codex login key-env set <ENV_VAR>
 ```
 
-These commands change in-memory runtime state only. Restarting the service reloads startup defaults from `.env` and `.env.api`, then expires old result-card expand/collapse state.
-
-For phone-only API mode testing after `.env.api` is configured and the service is restarted:
-
-```text
-codex status
-codex login use api
-codex login base-url set https://yunwu.ai/v1
-codex login key-env set OPENAI_API_KEY
-codex model set gpt-5.4-xhigh
-```
-
-If `.env.api` already sets `FCODING_AUTH_MODE`, `FCODING_API_BASE_URL`, `FCODING_API_KEY_ENV_VAR`, and `FCODING_MODEL`, `codex status` should show those defaults immediately after restart.
+FCoding always uses the local Codex ChatGPT login. There is no API-key login mode inside FCoding. Runtime commands change in-memory state only; restarting the service resets workspace/model overrides and expires old result-card expand/collapse state.
 
 ## Production Notes
 

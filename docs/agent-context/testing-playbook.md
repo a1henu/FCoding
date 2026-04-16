@@ -39,7 +39,6 @@ Examples:
 - new env var
 - changed default in `src/config.js`
 - `.env.example` update
-- `.env.api` loading behavior
 - setup docs update tied to config
 
 Minimum verification:
@@ -52,7 +51,6 @@ npm test
 Also check:
 
 - `.env.example` contains no real secrets.
-- `.env.api` remains ignored and is never staged.
 - README and `docs/agent-installation.md` describe the new variable.
 - `src/index.js` startup still works conceptually for both `ws` and `http`.
 
@@ -179,7 +177,7 @@ Check:
 - timeout
 - large output truncation
 - prompt remains the final child process argument unless intentionally changed
-- runtime-state options still append model/API provider args before the prompt
+- runtime-state options still append model args before the prompt
 
 ## Runtime Commands And State
 
@@ -187,8 +185,7 @@ Examples:
 
 - `src/commands.js`
 - `src/runtime-state.js`
-- `.env.api` startup defaults
-- workspace/model/auth command behavior
+- workspace/model command behavior
 - output card state and TTL
 
 Minimum verification:
@@ -203,7 +200,7 @@ Check:
 - built-in commands bypass Codex execution
 - workspace paths are resolved and verified before switching
 - model override appends expected Codex args
-- API auth mode injects provider config and env key correctly
+- FCoding remains ChatGPT-login only and does not inject API provider config
 - card state can retrieve stored task output for expand/collapse
 
 ## Shared Task Orchestration

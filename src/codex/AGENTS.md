@@ -13,7 +13,7 @@ This directory owns the boundary between FCoding and the local Codex CLI process
 - Called from `src/server.js#processCodexTask`.
 - Indirectly used by long connection mode through `src/feishu/ws.js`, which schedules `processCodexTask`.
 - Config values come from `src/config.js` under `config.codex`.
-- Runtime overrides come from `src/runtime-state.js`, which can change `cwd`, append model args, and add API provider args/env. Startup can initialize these values from `.env.api`.
+- Runtime overrides come from `src/runtime-state.js`, which can change `cwd` and append model args. FCoding uses the local Codex ChatGPT login, not API-key provider injection.
 
 ## Safer Changes
 
@@ -26,7 +26,7 @@ This directory owns the boundary between FCoding and the local Codex CLI process
 
 - Changing `spawn` options; shell execution is currently disabled with `shell: false`.
 - Changing argument order; current contract is `[...CODEX_ARGS, prompt]`.
-- Changing how runtime-state appends `-m` or `-c` provider args; this affects real Codex invocation.
+- Changing how runtime-state appends `-m` model args; this affects real Codex invocation.
 - Changing timeout kill behavior; current flow sends `SIGTERM` then `SIGKILL` after 5 seconds.
 - Adding interactive CLI handling without a clear protocol; current runner is non-interactive and returns after process close.
 - Changing default Codex args without checking the installed CLI's `codex exec --help`.

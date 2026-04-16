@@ -1,11 +1,11 @@
-import { loadDotEnvFiles } from './dotenv.js';
+import { loadDotEnv } from './dotenv.js';
 import { loadConfig } from './config.js';
 import { createRuntimeState } from './runtime-state.js';
 import { FeishuClient } from './feishu/client.js';
 import { createServer } from './server.js';
 import { startWsEventClient } from './feishu/ws.js';
 
-loadDotEnvFiles(['.env', '.env.api']);
+loadDotEnv();
 
 const config = loadConfig();
 const feishuClient = new FeishuClient(config.feishu);

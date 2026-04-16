@@ -10,7 +10,7 @@
 - `config.js`: parses env vars and owns runtime defaults.
 - `commands.js`: handles built-in FCoding commands such as `status`, `workspace`, `model`, and `login`.
 - `dotenv.js`: local `.env` loader.
-- `index.js` loads `.env` and then `.env.api` before config/runtime state are created.
+- `index.js` loads `.env` before config/runtime state are created.
 - `runtime-state.js`: in-memory runtime overrides and card state.
 - `server.js`: HTTP server plus shared `processCodexTask`.
 - `feishu/`: Feishu-specific integration.
@@ -35,9 +35,9 @@
 
 - Changing `processCodexTask`; it is shared by WS and HTTP paths.
 - Changing `handleBotCommand`; command prompts bypass Codex and affect user-visible bot behavior.
-- Changing `runtime-state.js`; it controls workspace/model/auth overrides and card output expansion state.
+- Changing `runtime-state.js`; it controls workspace/model overrides and card output expansion state.
 - Changing config defaults in `config.js`; `.env.example`, README, and agent docs may need updates.
-- Changing dotenv load order; this affects local secret overlays such as `.env.api`.
+- Changing dotenv loading; this affects local secret handling.
 - Changing startup mode selection in `index.js`; this can break local long connection operation.
 - Changing callback timing; Feishu may retry or show user-facing errors if handlers block or return invalid payloads.
 

@@ -61,10 +61,7 @@ function helpDetails() {
     '`codex model`',
     '`codex model set <name>`',
     '`codex login`',
-    '`codex login use chatgpt`',
-    '`codex login use api`',
-    '`codex login base-url set <url>`',
-    '`codex login key-env set <ENV_VAR>`'
+    '`codex login status`'
   ];
 }
 
@@ -187,84 +184,12 @@ export async function handleBotCommand({
       };
     }
 
-    if (subcommand === 'use') {
-      if (action === 'chatgpt') {
-        runtimeState.setAuthMode('chatgpt');
-        return {
-          handled: true,
-          card: buildCommandResultCard({
-            title: 'FCoding login mode updated',
-            summary: 'Auth mode switched to ChatGPT login.'
-          })
-        };
-      }
-
-      if (action === 'api') {
-        const nextRuntime = runtimeState.setAuthMode('api');
-        return {
-          handled: true,
-          card: buildCommandResultCard({
-            title: 'FCoding login mode updated',
-            summary: 'Auth mode switched to API key mode.',
-            details: [
-              `API base URL: \`${nextRuntime.apiBaseUrl}\``,
-              `API key env var: \`${nextRuntime.apiKeyEnvVar}\``,
-              nextRuntime.apiKeySource === 'missing'
-                ? 'No API key detected yet. Set the environment variable in the FCoding process environment before running tasks.'
-                : 'An API key is currently available to the FCoding process.'
-            ]
-          })
-        };
-      }
-    }
-
-    if (subcommand === 'base-url' && action === 'set') {
-      const nextBaseUrl = rest.join(' ').trim();
-      if (!nextBaseUrl) {
-        throw new Error('Base URL is required');
-      }
-
-      new URL(nextBaseUrl);
-      runtimeState.setApiBaseUrl(nextBaseUrl);
+    if (subcommand === 'use' && action === 'chatgpt') {
       return {
         handled: true,
         card: buildCommandResultCard({
-          title: 'FCoding API base URL updated',
-          summary: `API base URL set to \`${nextBaseUrl}\`.`
-        })
-      };
-    }
-
-    if (subcommand === 'base-url' && (action === 'reset' || action === 'clear')) {
-      const nextRuntime = runtimeState.resetApiBaseUrl();
-      return {
-        handled: true,
-        card: buildCommandResultCard({
-          title: 'FCoding API base URL reset',
-          summary: `API base URL reset to \`${nextRuntime.apiBaseUrl}\`.`
-        })
-      };
-    }
-
-    if (subcommand === 'key-env' && action === 'set') {
-      const envVarName = rest.join(' ').trim();
-      const nextRuntime = runtimeState.setApiKeyEnvVar(envVarName);
-      return {
-        handled: true,
-        card: buildCommandResultCard({
-          title: 'FCoding API key env updated',
-          summary: `FCoding will now read API keys from \`${nextRuntime.apiKeyEnvVar}\`.`
-        })
-      };
-    }
-
-    if (subcommand === 'key-env' && (action === 'reset' || action === 'clear')) {
-      const nextRuntime = runtimeState.resetApiKeyEnvVar();
-      return {
-        handled: true,
-        card: buildCommandResultCard({
-          title: 'FCoding API key env reset',
-          summary: `API key env var reset to \`${nextRuntime.apiKeyEnvVar}\`.`
+          title: 'FCoding login mode',
+          summary: 'FCoding always uses the local Codex ChatGPT login. API key mode is not supported.'
         })
       };
     }

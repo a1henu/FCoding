@@ -22,9 +22,9 @@ Suggested next step: Inspect `codex exec --help`, `codex exec --json`, `codex ap
 
 ## 3. What is the long-term state store for sessions and runtime state?
 
-Question: Should FCoding keep workspace/model/auth overrides and card state in memory, files, SQLite, Redis, or another backend?
+Question: Should FCoding keep workspace/model overrides and card state in memory, files, SQLite, Redis, or another backend?
 
-Why it matters: Interactive cards now map expand/collapse clicks back to stored task results, and runtime commands can change workspace/model/auth settings. In-memory state is simple but lost on restart.
+Why it matters: Interactive cards now map expand/collapse clicks back to stored task results, and runtime commands can change workspace/model settings. In-memory state is simple but lost on restart.
 
 Evidence seen: `src/runtime-state.js` stores state in memory. `EventDeduper` is also in-memory.
 

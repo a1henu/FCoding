@@ -10,7 +10,7 @@ FCoding bridges Feishu bot messages to local Codex CLI tasks:
 2. FCoding validates and normalizes the event.
 3. FCoding extracts a Codex prompt from the message.
 4. FCoding handles built-in commands locally, or acknowledges a Codex task quickly.
-5. Runtime state can override workspace, model, and auth behavior.
+5. Runtime state can override workspace and model behavior.
 6. Codex runs locally in the selected workspace.
 7. The bot replies with interactive progress/result cards.
 
@@ -31,18 +31,16 @@ The default runtime is Feishu long connection through `@larksuiteoapi/node-sdk`.
 
 - `src/commands.js`
   - Handles built-in bot commands before Codex is invoked.
-  - Current commands include help, status, workspace, model, and login/auth configuration.
+  - Current commands include help, status, workspace, model, and login status.
 
 - `src/runtime-state.js`
-  - Stores process-local workspace/model/auth overrides.
+  - Stores process-local workspace/model overrides.
   - Stores temporary card state for output expand/collapse actions.
   - Builds final Codex run options from base config plus runtime overrides.
-  - Initializes model/auth/API base URL/API key env name from environment, which can come from `.env.api`.
 
 - `src/dotenv.js`
   - Lightweight local `.env` loader.
   - Does not overwrite variables already exported by the shell.
-  - Startup loads `.env` and then `.env.api`; this lets local API-mode secrets stay in a separate ignored file.
 
 ## Feishu Layer
 
@@ -109,18 +107,8 @@ Do not reintroduce unsupported flags such as `--ask-for-approval` unless the ins
 Runtime state may append:
 
 - `-m <model>` when `codex model set <name>` was used.
-- `-c model_provider=...` and related provider settings when API auth mode is active.
-- an API key environment variable if it is available in process env or staged in memory.
 
-API-mode startup defaults can be supplied by ignored `.env.api`:
-
-```dotenv
-FCODING_AUTH_MODE=api
-FCODING_MODEL=<model>
-FCODING_API_BASE_URL=<openai-compatible-base-url>
-FCODING_API_KEY_ENV_VAR=OPENAI_API_KEY
-OPENAI_API_KEY=<secret>
-```
+FCoding intentionally does not support API-key login mode. It uses the local Codex ChatGPT login for all runs.
 
 ## Built-In Bot Commands
 
@@ -138,11 +126,6 @@ model clear
 login
 login status
 login use chatgpt
-login use api
-login base-url set <url>
-login base-url reset
-login key-env set <ENV_VAR>
-login key-env reset
 ```
 
 With the default prefix, users send messages such as `codex status` or `codex workspace set /repo`.
@@ -184,7 +167,7 @@ If Feishu shows `200340`, first check Feishu subscriptions. The app must subscri
 - `test/config.test.js`: config parsing.
 - `test/dotenv.test.js`: local `.env` loading.
 - `test/codex-runner.test.js`: Codex process execution and formatting.
-- `test/runtime-state.test.js`: runtime workspace/model/auth options and card state.
+- `test/runtime-state.test.js`: runtime workspace/model options and card state.
 - `test/feishu-client.test.js`: Feishu API client behavior.
 - `test/feishu-crypto.test.js`: signature and encryption logic.
 - `test/feishu-events.test.js`: event parsing, prompt extraction, allowlists, dedupe.
@@ -216,7 +199,6 @@ npm test
 - Long-running Codex tasks send periodic progress cards.
 - Built-in commands intentionally bypass Codex execution.
 - Runtime state is process-local and resets on restart.
-- Startup reloads `.env.api`, so API-mode defaults can survive restart without committing secrets.
 - GitHub Actions runs `npm ci` and `npm test` on push and pull request.
 - The service is dependency-light and uses Node's built-in test runner.
 - The app is intentionally local-first; production hardening should focus on process supervision, allowlists, and workspace isolation.

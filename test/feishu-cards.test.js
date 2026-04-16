@@ -34,8 +34,7 @@ test('builds a collapsible task status card', () => {
     runtime: {
       workspace: '/tmp/work',
       model: 'gpt-5',
-      authMode: 'chatgpt',
-      apiKeySource: 'missing'
+      authMode: 'chatgpt'
     },
     result: {
       ok: true,

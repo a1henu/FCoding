@@ -35,10 +35,10 @@ The two inbound modes share event parsing and Codex task processing, but WS mode
 
 `src/index.js` is the process entry:
 
-1. `loadDotEnvFiles(['.env', '.env.api'])` loads local env files without overwriting exported shell env or earlier loaded values.
+1. `loadDotEnv()` loads local `.env` without overwriting exported shell env.
 2. `loadConfig()` parses env vars and defaults.
 3. `new FeishuClient(config.feishu)` prepares outbound Feishu calls.
-4. `createRuntimeState({ config })` creates in-memory workspace/model/auth/card state for this process and can initialize API-mode defaults from env.
+4. `createRuntimeState({ config })` creates in-memory workspace/model/card state for this process.
 5. `FEISHU_EVENT_MODE=ws` starts `startWsEventClient()`.
 6. `FEISHU_EVENT_MODE=http` starts `createServer()`.
 7. SIGINT/SIGTERM closes the WS client or HTTP server.
@@ -104,7 +104,7 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - command defaults to `codex`
 - args default to `exec --skip-git-repo-check --sandbox workspace-write`
 - prompt is appended as the final argument
-- runtime state may override `cwd`, append `-m <model>`, or append `-c` provider configuration for API auth mode
+- runtime state may override `cwd` or append `-m <model>`
 - `shell: false`
 - timeout sends SIGTERM, then SIGKILL after 5 seconds
 - combined stdout/stderr is truncated from the middle
@@ -112,7 +112,7 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 ## Module Relationships
 
 - `commands.js` handles built-in runtime commands before Codex is invoked.
-- `runtime-state.js` stores in-memory workspace/model/auth settings and temporary card state; initial model/auth/API settings can come from `.env.api`.
+- `runtime-state.js` stores in-memory workspace/model settings and temporary card state.
 - `config.js` influences almost every runtime module. It is the only place env defaults should be introduced.
 - `events.js` is the security gate for who can run Codex.
 - `server.js` is both HTTP runtime and shared task orchestrator.
@@ -130,7 +130,6 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - `replyInteractiveCard()` sends `msg_type: interactive` and `content: JSON.stringify(card)`.
 - `updateInteractiveCard()` sends `PATCH /im/v1/messages/:message_id`; it is implemented and tested, but current expand/collapse callbacks return replacement cards through callback response rather than calling the client method.
 - Runtime card state is in memory and expires after 24 hours by default. Restarting the process invalidates old output expand/collapse cards.
-- `.env.api` is an ignored local secret overlay for API-mode defaults and API keys. It is loaded after `.env`, without overwriting values already set.
 - `patchWsClientCardCallbacks()` relies on installed SDK internals: `wsClient.handleEventData`, `wsClient.dataCache.mergeData`, `wsClient.eventDispatcher`, and `wsClient.sendMessage`.
 - Feishu card callbacks require console subscription to `card.action.trigger`. A healthy long-connection socket is not sufficient.
 

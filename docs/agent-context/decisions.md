@@ -24,21 +24,11 @@ Implication: Shared parsing changes must not silently break HTTP mode.
 
 Status: decided
 
-Reason: Feishu app credentials and local runtime settings are sensitive and environment-specific. API-mode secrets may be isolated into `.env.api`.
+Reason: Feishu app credentials and local runtime settings are sensitive and environment-specific.
 
-Evidence: `.gitignore` ignores `.env`, `.env.*`, and `.env.api`; `.env.example` is tracked as safe template; `src/index.js` loads `.env` and `.env.api` at startup.
+Evidence: `.gitignore` ignores `.env` and `.env.*`; `.env.example` is tracked as safe template; `src/index.js` loads `.env` at startup.
 
-Implication: Agents must never commit real `.env`/`.env.api` values or print app/API secrets.
-
-## API-Mode Runtime Defaults Can Come From `.env.api`
-
-Status: decided
-
-Reason: Phone-driven API mode needs the service process to already have an API key and provider defaults available before Feishu commands switch auth mode.
-
-Evidence: `src/index.js` loads `.env.api`; `src/runtime-state.js` reads `FCODING_AUTH_MODE`, `FCODING_MODEL`, `FCODING_API_BASE_URL`, and `FCODING_API_KEY_ENV_VAR`.
-
-Implication: `.env.api` is the preferred local file for API keys and API-mode startup defaults. Restarting the service reloads these defaults, while in-memory command changes still reset on restart.
+Implication: Agents must never commit real `.env` values or print app secrets.
 
 ## Empty Allowlists Mean Allow All For That Identifier Type
 
@@ -74,11 +64,11 @@ Implication: User messages such as `codex status` do not run Codex. Command name
 
 Status: decided by current implementation
 
-Reason: `createRuntimeState()` stores workspace/model/auth overrides and card state in process memory, seeded from environment where configured.
+Reason: `createRuntimeState()` stores workspace/model overrides and card state in process memory.
 
 Evidence: `src/runtime-state.js`, `test/runtime-state.test.js`.
 
-Implication: Restarting the service resets workspace/model/auth overrides and invalidates old expand/collapse output cards. This is acceptable for the current local-first design but must be revisited for durable multi-user sessions.
+Implication: Restarting the service resets workspace/model overrides and invalidates old expand/collapse output cards. This is acceptable for the current local-first design but must be revisited for durable multi-user sessions.
 
 ## Codex Prompt Is Appended As Final Argument
 
