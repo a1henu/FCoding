@@ -17,6 +17,13 @@ Install and configure FCoding by following the instructions here:
 https://raw.githubusercontent.com/a1henu/FCoding/refs/heads/main/docs/agent-installation.md
 ```
 
+或把下面这段中文 prompt 直接发给你的 AI coding agent：
+
+```text
+请按照这里的说明安装并配置 FCoding：
+https://raw.githubusercontent.com/a1henu/FCoding/refs/heads/main/docs/agent-installation.md
+```
+
 ### For Agents
 
 Read and follow:
