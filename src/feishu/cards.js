@@ -110,6 +110,26 @@ function makeCancelAction(taskId) {
   };
 }
 
+function makeModelAction(model) {
+  return {
+    tag: 'button',
+    text: plainText(model.label),
+    type: model.value ? 'default' : 'primary',
+    value: {
+      fcoding_action: 'set_model',
+      model: model.value
+    }
+  };
+}
+
+function chunkActions(actions, size = 3) {
+  const chunks = [];
+  for (let index = 0; index < actions.length; index += size) {
+    chunks.push(actions.slice(index, index + size));
+  }
+  return chunks;
+}
+
 export function buildCallbackTestCard({ nonce = String(Date.now()) } = {}) {
   return buildReplyCard({
     title: 'FCoding callback test',
@@ -162,6 +182,36 @@ export function buildCommandResultCard({
       ...(details.length > 0 ? ['', ...details] : [])
     ]
   });
+}
+
+export function buildModelSelectionCard({
+  runtime,
+  models
+}) {
+  const current = runtime.model ? `\`${runtime.model}\`` : 'default';
+  const elements = [{
+    tag: 'div',
+    text: markdown([
+      section('Current model', current),
+      'Choose a model below, or send `codex model set <name>` for a custom model.'
+    ].join('\n'))
+  }];
+
+  for (const actions of chunkActions(models.map(makeModelAction))) {
+    elements.push({
+      tag: 'action',
+      actions
+    });
+  }
+
+  return {
+    config: cardConfig(),
+    header: {
+      title: plainText('FCoding model'),
+      template: 'blue'
+    },
+    elements
+  };
 }
 
 export function buildRunningTaskCard({

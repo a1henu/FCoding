@@ -82,6 +82,20 @@ export function createCardActionTriggerHandler({
       });
     }
 
+    if (value.fcoding_action === 'set_model') {
+      const model = String(value.model || '').trim();
+      const nextRuntime = model
+        ? runtimeState.setModel(model)
+        : runtimeState.clearModel();
+      return buildCommandResultCard({
+        title: model ? 'FCoding model updated' : 'FCoding model cleared',
+        status: 'success',
+        summary: nextRuntime.model
+          ? `Model override set to \`${nextRuntime.model}\`.`
+          : 'Model override cleared. Future runs will use the Codex default.'
+      });
+    }
+
     return buildCallbackReceivedCard({
       action: value.fcoding_action || 'unknown',
       receivedAt: new Date().toISOString()

@@ -70,6 +70,16 @@ Evidence: `src/server.js`, `src/commands.js`, `test/server.test.js`.
 
 Implication: User messages such as `codex status` do not run Codex. Command names are part of the user-facing protocol and need tests/docs when changed.
 
+## Model Selection Uses A Feishu Card
+
+Status: decided by current implementation
+
+Reason: Users may not know valid model names. `codex model` now returns a selection card backed by `MODEL_CHOICES`, while `codex model set <name>` remains available for custom model IDs.
+
+Evidence: `src/commands.js#MODEL_CHOICES`, `src/feishu/cards.js#buildModelSelectionCard`, `src/feishu/ws.js` handling `set_model`, and tests in `test/feishu-cards.test.js`, `test/feishu-ws.test.js`, and `test/server.test.js`.
+
+Implication: The default model list is a user-facing protocol. Update docs and tests when changing choices, and keep a custom text fallback because Codex-supported models can change.
+
 ## Runtime State Is In Memory
 
 Status: decided by current implementation

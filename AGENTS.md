@@ -94,6 +94,7 @@ Use `npm start` only when you need to run the local service. It reads `.env` and
 - Are Feishu event subscriptions, permissions, and callback types documented when relevant?
 - Does every changed runtime behavior have a test?
 - Are built-in commands documented and covered by server/runtime-state tests?
+- If model choices changed, are `MODEL_CHOICES`, model selection cards, callback tests, and docs still aligned?
 - Did message/task parsing still reject unsupported event types and non-text messages?
 - Did Codex execution still handle success, failure, timeout, cancellation, and output truncation?
 - Did task cancellation still work from both `codex cancel` and running-card `cancel_task` callbacks?

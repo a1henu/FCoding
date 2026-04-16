@@ -35,6 +35,7 @@ These areas affect multiple modules or user-visible behavior.
 - `src/commands.js`
   - User-facing runtime command protocol.
   - Commands bypass Codex and can change workspace/model behavior or cancel an active task.
+  - `MODEL_CHOICES` is user-facing because it controls the `codex model` selection card.
 
 - `src/runtime-state.js`
   - In-memory runtime overrides, active task cancellation, and temporary card state.
@@ -77,6 +78,7 @@ Do not edit these concurrently without explicit ownership.
   - Card callback routing.
   - SDK card-frame patch using internal WS client methods.
   - Breakage can cause Feishu user-facing `200340` errors.
+  - Model selection, output expand/collapse, and task cancellation callbacks all route through this file.
 
 - `src/server.js#processCodexTask`
   - Shared by WS and HTTP paths.

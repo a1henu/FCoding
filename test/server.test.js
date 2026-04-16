@@ -190,6 +190,35 @@ test('handles built-in command prompts before running codex', async () => {
   assert.equal(cards[0].card.header.title.content, 'FCoding status');
 });
 
+test('returns a model selection card for model command', async () => {
+  const cards = [];
+  const config = makeConfig();
+  const runtimeState = createRuntimeState({ config });
+
+  await processCodexTask({
+    task: {
+      eventId: 'evt-model',
+      messageId: 'msg-model',
+      prompt: 'model'
+    },
+    config,
+    runtimeState,
+    feishuClient: {
+      async replyInteractiveCard(messageId, card) {
+        cards.push({ messageId, card });
+      }
+    },
+    codexRunner: async () => {
+      throw new Error('model command should not run codex');
+    },
+    logger: { error() {} }
+  });
+
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].card.header.title.content, 'FCoding model');
+  assert.equal(cards[0].card.elements.at(-1).actions[0].value.fcoding_action, 'set_model');
+});
+
 test('answers Feishu url verification challenges', async () => {
   const server = createServer({
     config: makeConfig(),

@@ -32,6 +32,7 @@ The default runtime is Feishu long connection through `@larksuiteoapi/node-sdk`.
 - `src/commands.js`
   - Handles built-in bot commands before Codex is invoked.
   - Current commands include help, status, workspace, model, login status, and cancel.
+  - Owns `MODEL_CHOICES`, the user-facing model list shown by `codex model`.
 
 - `src/runtime-state.js`
   - Stores process-local workspace/model overrides.
@@ -66,14 +67,14 @@ The default runtime is Feishu long connection through `@larksuiteoapi/node-sdk`.
   - Mostly relevant to HTTP webhook mode.
 
 - `src/feishu/cards.js`
-  - Builds callback test cards, command result cards, status cards, running task cards with Cancel buttons, and task result cards with output expand/collapse buttons.
+  - Builds callback test cards, command result cards, status cards, model selection cards, running task cards with Cancel buttons, and task result cards with output expand/collapse buttons.
 
 - `src/feishu/ws.js`
   - Starts the official Feishu `WSClient`.
   - Creates the normal `EventDispatcher`.
   - Creates a `CardActionHandler` for card callbacks.
   - Routes `im.message.receive_v1` to Codex task processing.
-  - Routes `card.action.trigger` to card action handling, including output expand/collapse and cancel callbacks.
+  - Routes `card.action.trigger` to card action handling, including model selection, output expand/collapse, and cancel callbacks.
   - Patches the SDK client to dispatch websocket frames with `type=card`, because the installed Node SDK only dispatches normal event frames by default.
 
 ## HTTP Mode
@@ -131,7 +132,7 @@ login use chatgpt
 cancel
 ```
 
-With the default prefix, users send messages such as `codex status` or `codex workspace set /repo`.
+With the default prefix, users send messages such as `codex status` or `codex workspace set /repo`. `codex model` returns a clickable selection card; `codex model set <name>` remains available for custom model IDs not shown in the card.
 
 Command behavior lives in `src/commands.js`; state lives in `src/runtime-state.js`; tests live in `test/server.test.js` and `test/runtime-state.test.js`.
 
@@ -146,7 +147,7 @@ Command behavior lives in `src/commands.js`; state lives in `src/runtime-state.j
 7. `processCodexTask()` first asks `handleBotCommand()` whether the prompt is an FCoding command.
 8. For Codex tasks, `processCodexTask()` registers active task state, sends a running card with a Cancel button, starts periodic progress cards, runs Codex with an abort signal, stops progress, stores result card state, and replies with a collapsed result card.
 9. `card.action.trigger` is routed to the SDK `CardActionHandler`.
-10. Expand/collapse card buttons use runtime card state to rebuild task result cards; Cancel buttons abort active Codex tasks by task ID.
+10. Model selection buttons update runtime model state; expand/collapse card buttons use runtime card state to rebuild task result cards; Cancel buttons abort active Codex tasks by task ID.
 
 ## Callback Test Command
 

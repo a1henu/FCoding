@@ -134,6 +134,7 @@ Examples:
 
 - new status cards
 - command result cards
+- model selection cards
 - task result cards with output expand/collapse
 - permission buttons
 - choice cards
@@ -151,6 +152,7 @@ Check:
 - callback `value` contains enough routing info
 - no secrets or full prompts are embedded unnecessarily
 - repeated clicks have a defined behavior
+- model selection cards preserve `set_model` values and include a clear/default option
 - running task cards preserve the `cancel_task` value and task ID when cancellation is available
 
 ## Codex Runner Changes
@@ -188,6 +190,7 @@ Examples:
 - `src/commands.js`
 - `src/runtime-state.js`
 - workspace/model command behavior
+- model selection card behavior
 - cancel command behavior
 - output card state and TTL
 
@@ -203,6 +206,7 @@ Check:
 - built-in commands bypass Codex execution
 - workspace paths are resolved and verified before switching
 - model override appends expected Codex args
+- `codex model` returns a selection card, while `codex model set <name>` still supports custom models
 - FCoding remains ChatGPT-login only and does not inject API provider config
 - card state can retrieve stored task output for expand/collapse
 - active task state can cancel a registered task and clear it after completion

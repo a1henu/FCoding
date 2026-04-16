@@ -251,6 +251,39 @@ test('card action handler cancels active tasks', async () => {
   assert.equal(response.header.title.content, 'FCoding task cancel requested');
 });
 
+test('card action handler sets model override', async () => {
+  const runtimeState = createRuntimeState({ config: makeConfig() });
+  const handler = createCardActionTriggerHandler({
+    logger: { info() {} },
+    runtimeState
+  });
+
+  const response = await handler({
+    operator: { open_id: 'ou-1' },
+    action: { value: { fcoding_action: 'set_model', model: 'gpt-5.4-mini' } }
+  });
+
+  assert.equal(runtimeState.snapshot().model, 'gpt-5.4-mini');
+  assert.equal(response.header.title.content, 'FCoding model updated');
+});
+
+test('card action handler clears model override', async () => {
+  const runtimeState = createRuntimeState({ config: makeConfig() });
+  runtimeState.setModel('gpt-5.4');
+  const handler = createCardActionTriggerHandler({
+    logger: { info() {} },
+    runtimeState
+  });
+
+  const response = await handler({
+    operator: { open_id: 'ou-1' },
+    action: { value: { fcoding_action: 'set_model', model: '' } }
+  });
+
+  assert.equal(runtimeState.snapshot().model, '');
+  assert.equal(response.header.title.content, 'FCoding model cleared');
+});
+
 test('WS dispatcher routes card action callbacks through the official card handler', async () => {
   FakeCardActionHandler.last = null;
   const dispatcher = createWsEventDispatcher({

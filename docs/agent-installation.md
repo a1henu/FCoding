@@ -185,6 +185,8 @@ codex cancel
 
 FCoding always uses the local Codex ChatGPT login. There is no API-key login mode inside FCoding. Runtime commands change in-memory state only; restarting the service resets workspace/model overrides, removes active task cancellation state, and expires old result-card expand/collapse state.
 
+`codex model` opens a clickable model selection card. Use `codex model set <name>` only for a custom model ID that is not listed on the card.
+
 ## Production Notes
 
 - Run the process under a dedicated OS user.

@@ -2,7 +2,16 @@ import path from 'node:path';
 import { access } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { spawn } from 'node:child_process';
-import { buildCommandResultCard, buildStatusCard } from './feishu/cards.js';
+import { buildCommandResultCard, buildModelSelectionCard, buildStatusCard } from './feishu/cards.js';
+
+export const MODEL_CHOICES = [
+  { label: 'Use default', value: '' },
+  { label: 'gpt-5.4', value: 'gpt-5.4' },
+  { label: 'gpt-5.4-mini', value: 'gpt-5.4-mini' },
+  { label: 'gpt-5.2', value: 'gpt-5.2' },
+  { label: 'gpt-5.2-codex', value: 'gpt-5.2-codex' },
+  { label: 'gpt-5.1-codex-max', value: 'gpt-5.1-codex-max' }
+];
 
 function splitCommand(input) {
   return String(input || '')
@@ -159,11 +168,9 @@ export async function handleBotCommand({
     if (!subcommand) {
       return {
         handled: true,
-        card: buildCommandResultCard({
-          title: 'FCoding model',
-          summary: runtime.model
-            ? `Current model override: \`${runtime.model}\``
-            : 'Current model override: default'
+        card: buildModelSelectionCard({
+          runtime,
+          models: MODEL_CHOICES
         })
       };
     }

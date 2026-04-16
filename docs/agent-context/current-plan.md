@@ -9,11 +9,11 @@ The repository has a working baseline:
 - Card callback smoke test works after subscribing `card.action.trigger`.
 - HTTP webhook mode has tests but is not the primary deployment path.
 - Codex execution is still process-based, but workspace/model runtime options can now be adjusted from Feishu commands before a task runs.
-- Built-in commands now cover help/status/workspace/model/login status/cancel flows. Login is informational because FCoding always relies on the local Codex ChatGPT login.
+- Built-in commands now cover help/status/workspace/model/login status/cancel flows. `codex model` returns a model selection card; `codex model set <name>` remains the custom fallback. Login is informational because FCoding always relies on the local Codex ChatGPT login.
 - Running task cards include a Cancel button backed by `card.action.trigger` and `AbortSignal` cancellation in the Codex runner.
 - Final task results are sent as cards with output expand/collapse callbacks backed by in-memory runtime card state.
 - GitHub Actions runs `npm ci` and `npm test` on push and pull request.
-- Tests are fast and local: currently 52 Node tests.
+- Tests are fast and local: currently 56 Node tests.
 - Agent-facing installation and project overview docs exist.
 
 The next phase is better suited to tightening runtime command behavior and interaction state before deeper Codex streaming/permission work. Avoid broad refactors until command/state contracts are stable.
@@ -139,7 +139,7 @@ Use explicit file ownership in prompts. Avoid assigning two workers to the same 
 
 ## Near-Term Priorities
 
-1. Document and harden built-in runtime commands, especially workspace/model switching and login status reporting.
+1. Document and harden built-in runtime commands, especially workspace/model selection and login status reporting.
 2. Add retry-safe behavior for repeated cancel/expand card actions if Feishu retry/double-click becomes a problem.
 3. Define an internal representation for true Codex streaming, choices, and permission prompts.
 4. Harden access control defaults or first-run setup guidance before wider deployment.

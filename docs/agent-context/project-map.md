@@ -72,6 +72,7 @@ For card callbacks:
 4. `callback_test` returns a card from `buildCallbackReceivedCard()`.
 5. `expand_output` and `collapse_output` load a stored `task_result` card state from `runtimeState` and rebuild the task status card.
 6. `cancel_task` cancels an active Codex task by task ID through `runtimeState.cancelActiveTask()`.
+7. `set_model` sets or clears the in-memory model override through `runtimeState.setModel()` or `runtimeState.clearModel()`.
 
 Important coupling: card callback smoke tests depend on `src/feishu/cards.js`, `src/feishu/ws.js`, Feishu console subscription to `card.action.trigger`, and the SDK patch for `type=card` frames.
 
@@ -131,6 +132,8 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - Current task orchestration now primarily uses `replyInteractiveCard(messageId, card)` for ack/progress/final/error replies.
 - Built-in commands use `task.prompt` after `BOT_TRIGGER_PREFIX` removal, so users send `codex status` but `handleBotCommand()` receives `status`.
 - `codex cancel` cancels the most recent active task; running-card Cancel buttons cancel by task ID through `card.action.trigger`.
+- `codex model` sends a selection card with known model choices; custom values still use `codex model set <name>`.
+- Model selection card callbacks use `fcoding_action: set_model` and directly mutate in-memory runtime state.
 - `replyInteractiveCard()` sends `msg_type: interactive` and `content: JSON.stringify(card)`.
 - `updateInteractiveCard()` sends `PATCH /im/v1/messages/:message_id`; it is implemented and tested, but current expand/collapse callbacks return replacement cards through callback response rather than calling the client method.
 - Runtime card state and active task state are in memory. Restarting the process invalidates old output expand/collapse cards and removes the ability to cancel already-spawned tasks through FCoding state.
@@ -144,6 +147,7 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - Change Feishu outbound reply behavior: start in `src/feishu/client.js`, then `test/feishu-client.test.js`.
 - Change long connection/card callbacks: start in `src/feishu/ws.js`, `src/feishu/cards.js`, `test/feishu-ws.test.js`, and `test/feishu-cards.test.js`.
 - Change built-in commands: start in `src/commands.js`, `src/runtime-state.js`, `src/server.js`, `test/runtime-state.test.js`, and `test/server.test.js`.
+- Change model selection choices: start in `src/commands.js#MODEL_CHOICES`, `src/feishu/cards.js`, `src/feishu/ws.js`, and command/card/callback tests.
 - Change task cancellation: start in `src/server.js`, `src/runtime-state.js`, `src/codex/runner.js`, `src/feishu/ws.js`, and card tests.
 - Change Codex execution: start in `src/codex/runner.js`, then `test/codex-runner.test.js`.
 - Change progress/ack/final reply orchestration: start in `src/server.js`, then `test/server.test.js` and `test/feishu-ws.test.js`.
