@@ -62,6 +62,27 @@ test('replies with interactive cards', async () => {
   });
 });
 
+test('updates interactive cards', async () => {
+  const calls = [];
+  const client = new FeishuClient({
+    appId: 'app-id',
+    appSecret: 'secret',
+    baseUrl: 'https://feishu.test/open-apis',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith('/auth/v3/tenant_access_token/internal')) {
+        return jsonResponse({ code: 0, tenant_access_token: 'tenant-token', expire: 7200 });
+      }
+      return jsonResponse({ code: 0 });
+    }
+  });
+
+  await client.updateInteractiveCard('msg-1', { header: { title: { tag: 'plain_text', content: 'T' } } });
+
+  assert.match(calls[1].url, /\/im\/v1\/messages\/msg-1$/);
+  assert.equal(calls[1].options.method, 'PATCH');
+});
+
 
 test('caches tenant tokens until expiry', async () => {
   let now = 1000;

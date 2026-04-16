@@ -80,6 +80,18 @@ export class FeishuClient {
     });
   }
 
+  async updateInteractiveCard(messageId, card) {
+    const token = await this.getTenantAccessToken();
+    return this.requestJson(`/im/v1/messages/${encodeURIComponent(messageId)}`, {
+      method: 'PATCH',
+      token,
+      body: {
+        msg_type: 'interactive',
+        content: JSON.stringify(card)
+      }
+    });
+  }
+
   async replyText(messageId, text) {
     const token = await this.getTenantAccessToken();
     const chunks = splitText(text, this.maxReplyChars);
