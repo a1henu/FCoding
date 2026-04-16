@@ -107,11 +107,13 @@ export function loadConfig(env = process.env) {
   const port = parseInteger(env.PORT, 3000);
   const callbackPath = env.FEISHU_CALLBACK_PATH || '/feishu/events';
   const encryptKey = env.FEISHU_ENCRYPT_KEY || '';
+  const eventMode = env.FEISHU_EVENT_MODE || 'http';
 
   return {
     port,
     host: env.HOST || '0.0.0.0',
     callbackPath,
+    eventMode,
     bodyLimitBytes: parseInteger(env.BODY_LIMIT_BYTES, 1024 * 1024),
     verifyFeishuSignature: parseBoolean(
       env.FEISHU_VERIFY_SIGNATURE,

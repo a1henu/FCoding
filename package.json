@@ -10,5 +10,11 @@
   },
   "engines": {
     "node": ">=20.11"
+  },
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.60.0"
+  },
+  "overrides": {
+    "axios": "1.15.0"
   }
 }

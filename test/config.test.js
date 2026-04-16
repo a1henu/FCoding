@@ -22,6 +22,7 @@ test('loads deployment config from environment values', () => {
     HOST: '127.0.0.1',
     FEISHU_APP_ID: 'app-id',
     FEISHU_APP_SECRET: 'secret',
+    FEISHU_EVENT_MODE: 'ws',
     FEISHU_VERIFICATION_TOKEN: 'verify-token',
     FEISHU_ENCRYPT_KEY: 'encrypt-key',
     ALLOWED_OPEN_IDS: 'ou_1,ou_2',
@@ -33,6 +34,7 @@ test('loads deployment config from environment values', () => {
 
   assert.equal(config.port, 8080);
   assert.equal(config.host, '127.0.0.1');
+  assert.equal(config.eventMode, 'ws');
   assert.equal(config.verifyFeishuSignature, true);
   assert.equal(config.feishu.appId, 'app-id');
   assert.deepEqual(config.access.allowedOpenIds, ['ou_1', 'ou_2']);

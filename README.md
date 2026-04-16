@@ -2,23 +2,27 @@
 
 FCoding is a small Feishu bot bridge that lets a Feishu message trigger a local Codex CLI task and receive the result back in the same message thread.
 
-The service uses only Node built-ins at runtime. It handles Feishu URL verification, request signature checks, encrypted callbacks, message parsing, duplicate event suppression, tenant access token caching, message replies, Codex process execution, timeouts, and output truncation.
+The default runtime uses the official Feishu Node SDK for long-connection event delivery. The optional HTTP webhook mode still handles Feishu URL verification, request signature checks, encrypted callbacks, message parsing, duplicate event suppression, tenant access token caching, message replies, Codex process execution, timeouts, and output truncation.
 
 ## Requirements
 
 - Node.js 20.11 or newer
 - A working `codex` CLI on the machine running this service
 - A Feishu custom app with bot capability enabled
-- A public HTTPS URL that can reach this service, for example through a reverse proxy or tunnel
+- For the default long-connection mode: outbound internet access from this machine
+- For optional HTTP webhook mode: a public HTTPS URL that can reach this service
 
 ## Feishu App Setup
 
 1. Enable the app bot in the Feishu developer console.
-2. Add the message receive event, usually `im.message.receive_v1` / Receive Message v2.0.
-3. Grant the app permission to receive and send single chat or group messages.
-4. Configure the event request URL as `https://<your-domain>/feishu/events`.
-5. Copy the app id, app secret, verification token, and encrypt key into your environment.
-6. Publish or release the app according to your Feishu tenant requirements, then add the bot to the target chat.
+2. In Events and Callbacks, choose the long-connection event subscription mode.
+3. Add the message receive event, usually `im.message.receive_v1` / Receive Message v2.0.
+4. Grant the app permission to receive messages and send messages as the bot.
+5. Copy the app id and app secret into your local `.env`.
+6. Start this service, verify the long-connection status in the Feishu console, then publish or release the app according to your tenant requirements.
+7. Add the bot to the target chat.
+
+Long-connection mode does not require a public HTTPS callback URL, verification token, or encrypt key. Those fields are only needed if `FEISHU_EVENT_MODE=http` is used.
 
 Useful API references:
 
@@ -33,9 +37,10 @@ Copy `.env.example` to `.env` for local development. `npm start` loads `.env` au
 Important variables:
 
 - `FEISHU_APP_ID`, `FEISHU_APP_SECRET`: Feishu app credentials.
-- `FEISHU_VERIFICATION_TOKEN`: checked against callback payload tokens.
-- `FEISHU_ENCRYPT_KEY`: used for request signature validation and encrypted event payloads.
-- `FEISHU_VERIFY_SIGNATURE`: defaults to true when `FEISHU_ENCRYPT_KEY` is present.
+- `FEISHU_EVENT_MODE`: use `ws` for Feishu long connection, or `http` for webhook callbacks.
+- `FEISHU_VERIFICATION_TOKEN`: only used in HTTP webhook mode.
+- `FEISHU_ENCRYPT_KEY`: only used in HTTP webhook mode for signature validation and encrypted event payloads.
+- `FEISHU_VERIFY_SIGNATURE`: only used in HTTP webhook mode.
 - `BOT_TRIGGER_PREFIX`: optional text prefix after the bot mention. With `codex`, a message like `@Bot codex run tests` sends `run tests` to Codex.
 - `ALLOWED_OPEN_IDS`, `ALLOWED_USER_IDS`, `ALLOWED_CHAT_IDS`: comma-separated allowlists. Keep at least one allowlist in production.
 - `CODEX_WORKDIR`: repository directory where Codex should work.
@@ -48,13 +53,15 @@ npm test
 npm start
 ```
 
-Health check:
+For long-connection mode, keep `npm start` running and use the Feishu console button to verify the connection state.
+
+Health check is available only in HTTP webhook mode:
 
 ```bash
 curl http://127.0.0.1:3000/healthz
 ```
 
-Feishu should call:
+For HTTP webhook mode, Feishu should call:
 
 ```text
 POST https://<your-domain>/feishu/events
@@ -62,18 +69,17 @@ POST https://<your-domain>/feishu/events
 
 ## How It Works
 
-1. Feishu sends an event callback to `POST /feishu/events`.
-2. The server verifies the request signature when enabled and decrypts `encrypt` payloads when present.
-3. URL verification callbacks receive `{ "challenge": "..." }` immediately.
-4. Text message events are filtered through allowlists and `BOT_TRIGGER_PREFIX`.
-5. The server returns `200` quickly, then runs Codex asynchronously.
-6. The bot replies first with an acknowledgement, then with the Codex result or failure details.
+1. In long-connection mode, the official Feishu SDK opens a WebSocket connection to Feishu and receives subscribed events locally.
+2. In HTTP mode, Feishu sends an event callback to `POST /feishu/events`; the server verifies signatures and decrypts encrypted payloads when enabled.
+3. Text message events are filtered through allowlists and `BOT_TRIGGER_PREFIX`.
+4. Event handlers return quickly, then run Codex asynchronously so Feishu does not retry due to callback timeout.
+5. The bot replies first with an acknowledgement, then with the Codex result or failure details.
 
 ## Security Notes
 
-Codex can modify files in `CODEX_WORKDIR`, and the default arguments allow workspace writes without interactive approvals so the bot can finish unattended. Run this bridge under a dedicated OS user, point it at a dedicated workspace, keep Feishu signature verification enabled, and restrict callers with allowlists.
+Codex can modify files in `CODEX_WORKDIR`, and the default arguments allow workspace writes without interactive approvals so the bot can finish unattended. Run this bridge under a dedicated OS user, point it at a dedicated workspace, and restrict callers with allowlists.
 
-Do not expose this service without HTTPS and Feishu callback verification.
+For HTTP webhook mode, do not expose this service without HTTPS and Feishu callback verification.
 
 ## Development Flow
 
