@@ -4,6 +4,16 @@ FCoding is a small Feishu bot bridge that lets a Feishu message trigger a local 
 
 The default runtime uses the official Feishu Node SDK for long-connection event delivery. The optional HTTP webhook mode still handles Feishu URL verification, request signature checks, encrypted callbacks, message parsing, duplicate event suppression, tenant access token caching, message replies, Codex process execution, timeouts, and output truncation.
 
+## Recommended Setup
+
+The easiest way to install this project is to open the repository with an AI coding agent and send it this message:
+
+```text
+Please configure this FCoding repository for my Feishu Codex bot. Read docs/agent-installation.md first, then guide me step by step. Keep secrets only in .env, make sure .env is ignored by git, ask me for Feishu App ID/App Secret when needed, help me subscribe Feishu long-connection events, run tests after each change, and commit/push only safe source, tests, and docs.
+```
+
+The agent should then walk you through Feishu console setup, local `.env` creation, dependency installation, tests, startup, and smoke tests. Do not paste app secrets into tracked files or chat messages that will be committed.
+
 ## Requirements
 
 - Node.js 20.11 or newer
@@ -17,12 +27,15 @@ The default runtime uses the official Feishu Node SDK for long-connection event 
 1. Enable the app bot in the Feishu developer console.
 2. In Events and Callbacks, choose the long-connection event subscription mode.
 3. Add the message receive event, usually `im.message.receive_v1` / Receive Message v2.0.
-4. Grant the app permission to receive messages and send messages as the bot.
-5. Copy the app id and app secret into your local `.env`.
-6. Start this service, verify the long-connection status in the Feishu console, then publish or release the app according to your tenant requirements.
-7. Add the bot to the target chat.
+4. Add the card callback event `card.action.trigger` if you want interactive cards and approval/choice flows.
+5. Grant the app permission to receive messages and send messages as the bot.
+6. Copy the app id and app secret into your local `.env`.
+7. Start this service, verify the long-connection status in the Feishu console, then publish or release the app according to your tenant requirements.
+8. Add the bot to the target chat.
 
 Long-connection mode does not require a public HTTPS callback URL, verification token, or encrypt key. Those fields are only needed if `FEISHU_EVENT_MODE=http` is used.
+
+The long-connection status check only proves the socket is connected. Feishu still delivers only the events you subscribe to. If card clicks show error `200340`, confirm `card.action.trigger` is subscribed and the app version has been released if your tenant requires release approval.
 
 Useful API references:
 
@@ -91,3 +104,8 @@ For HTTP webhook mode, do not expose this service without HTTPS and Feishu callb
 ## Development Flow
 
 This repository is intentionally dependency-light. Add code with focused tests, run `npm test`, and commit each completed feature slice.
+
+Agent-facing documents:
+
+- [Agent Installation Guide](docs/agent-installation.md)
+- [Agent Project Guide](docs/agent-project.md)
