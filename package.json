@@ -1,0 +1,14 @@
+{
+  "name": "fcoding",
+  "version": "0.1.0",
+  "description": "Feishu bot bridge for running Codex tasks.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}
