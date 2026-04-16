@@ -136,7 +136,8 @@ export function loadConfig(env = process.env) {
       args: parseArgs(env.CODEX_ARGS),
       cwd: env.CODEX_WORKDIR || process.cwd(),
       timeoutMs: parseInteger(env.CODEX_TIMEOUT_MS, 10 * 60 * 1000),
-      maxOutputChars: parseInteger(env.CODEX_MAX_OUTPUT_CHARS, 12000)
+      maxOutputChars: parseInteger(env.CODEX_MAX_OUTPUT_CHARS, 12000),
+      progressIntervalMs: parseInteger(env.CODEX_PROGRESS_INTERVAL_MS, 30 * 1000)
     }
   };
 }

@@ -45,6 +45,7 @@ Important variables:
 - `ALLOWED_OPEN_IDS`, `ALLOWED_USER_IDS`, `ALLOWED_CHAT_IDS`: comma-separated allowlists. Keep at least one allowlist in production.
 - `CODEX_WORKDIR`: repository directory where Codex should work.
 - `CODEX_ARGS`: arguments placed before the prompt. The default is `exec --skip-git-repo-check --sandbox workspace-write`.
+- `CODEX_PROGRESS_INTERVAL_MS`: sends a periodic running-status reply while Codex is still working. Set to `0` to disable.
 
 ## Run Locally
 

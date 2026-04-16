@@ -61,18 +61,76 @@ export function parseIncomingFeishuBody(rawBody, headers, config) {
   return envelope;
 }
 
+export function formatElapsed(milliseconds) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes === 0) {
+    return `${seconds}s`;
+  }
+
+  return `${minutes}m ${seconds}s`;
+}
+
+export function startProgressReplies({
+  task,
+  feishuClient,
+  intervalMs,
+  logger = console,
+  now = () => Date.now()
+}) {
+  if (!intervalMs || intervalMs <= 0) {
+    return () => {};
+  }
+
+  const startedAt = now();
+  let inFlight = false;
+  const timer = setInterval(async () => {
+    if (inFlight) {
+      return;
+    }
+
+    inFlight = true;
+    try {
+      await feishuClient.replyText(
+        task.messageId,
+        `Codex is still working. Elapsed: ${formatElapsed(now() - startedAt)}.`
+      );
+    } catch (error) {
+      logger.error({ error, eventId: task.eventId }, 'Failed to send Codex progress update');
+    } finally {
+      inFlight = false;
+    }
+  }, intervalMs);
+
+  timer.unref?.();
+  return () => clearInterval(timer);
+}
+
 export async function processCodexTask({ task, config, feishuClient, codexRunner, logger }) {
+  let stopProgressReplies = () => {};
+
   try {
     if (config.feishu.sendAck) {
       await feishuClient.replyText(task.messageId, 'Received. Codex is working on it.');
     }
 
+    stopProgressReplies = startProgressReplies({
+      task,
+      feishuClient,
+      intervalMs: config.codex.progressIntervalMs,
+      logger
+    });
+
     const result = await codexRunner({
       prompt: task.prompt,
       ...config.codex
     });
+    stopProgressReplies();
     await feishuClient.replyText(task.messageId, formatCodexResult(result));
   } catch (error) {
+    stopProgressReplies();
     logger.error({ error, eventId: task.eventId }, 'Codex task failed');
     try {
       await feishuClient.replyText(

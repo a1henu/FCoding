@@ -29,7 +29,8 @@ test('loads deployment config from environment values', () => {
     BOT_TRIGGER_PREFIX: 'codex',
     CODEX_COMMAND: 'node',
     CODEX_ARGS: '-e "console.log(1)"',
-    CODEX_TIMEOUT_MS: '5000'
+    CODEX_TIMEOUT_MS: '5000',
+    CODEX_PROGRESS_INTERVAL_MS: '15000'
   });
 
   assert.equal(config.port, 8080);
@@ -41,4 +42,5 @@ test('loads deployment config from environment values', () => {
   assert.equal(config.access.triggerPrefix, 'codex');
   assert.deepEqual(config.codex.args, ['-e', 'console.log(1)']);
   assert.equal(config.codex.timeoutMs, 5000);
+  assert.equal(config.codex.progressIntervalMs, 15000);
 });

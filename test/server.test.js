@@ -3,7 +3,7 @@ import test from 'node:test';
 import { once } from 'node:events';
 import { calculateSignature } from '../src/feishu/crypto.js';
 import { loadConfig } from '../src/config.js';
-import { createServer } from '../src/server.js';
+import { createServer, formatElapsed, processCodexTask } from '../src/server.js';
 
 function makeConfig(overrides = {}) {
   const config = loadConfig({
@@ -56,6 +56,41 @@ function textMessagePayload({ eventId = 'evt-1', text = 'codex run tests' } = {}
     }
   };
 }
+
+
+test('formats elapsed time for progress replies', () => {
+  assert.equal(formatElapsed(999), '0s');
+  assert.equal(formatElapsed(61_000), '1m 1s');
+});
+
+test('sends periodic Codex progress replies while a task is running', async () => {
+  const replies = [];
+  const config = makeConfig({ codex: { progressIntervalMs: 5 } });
+
+  await processCodexTask({
+    task: {
+      eventId: 'evt-progress',
+      messageId: 'msg-progress',
+      prompt: 'slow task'
+    },
+    config,
+    feishuClient: {
+      async replyText(messageId, text) {
+        replies.push({ messageId, text });
+      }
+    },
+    codexRunner: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      return { ok: true, output: 'done', durationMs: 25 };
+    },
+    logger: { error() {} }
+  });
+
+  assert.equal(replies[0].text, 'Received. Codex is working on it.');
+  assert.ok(replies.some((reply) => /Codex is still working\. Elapsed:/.test(reply.text)));
+  assert.match(replies.at(-1).text, /done/);
+});
+
 
 test('answers Feishu url verification challenges', async () => {
   const server = createServer({
