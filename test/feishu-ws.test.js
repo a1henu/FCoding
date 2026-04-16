@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadConfig } from '../src/config.js';
+import { createRuntimeState } from '../src/runtime-state.js';
 import {
   createCardActionTriggerHandler,
   createWsEventDispatcher,
@@ -136,7 +137,7 @@ test('normalizes Feishu WS message events for existing task extraction', () => {
 });
 
 test('WS dispatcher schedules Codex work and returns quickly', async () => {
-  const replies = [];
+  const cards = [];
   let resolveDone;
   const done = new Promise((resolve) => {
     resolveDone = resolve;
@@ -144,10 +145,11 @@ test('WS dispatcher schedules Codex work and returns quickly', async () => {
 
   const dispatcher = createWsEventDispatcher({
     config: makeConfig(),
+    runtimeState: createRuntimeState({ config: makeConfig() }),
     feishuClient: {
-      async replyText(messageId, text) {
-        replies.push({ messageId, text });
-        if (replies.length === 2) {
+      async replyInteractiveCard(messageId, card) {
+        cards.push({ messageId, card });
+        if (cards.length === 2) {
           resolveDone();
         }
       }
@@ -160,15 +162,15 @@ test('WS dispatcher schedules Codex work and returns quickly', async () => {
   await dispatcher.invoke(wsEnvelope());
   await done;
 
-  assert.equal(replies[0].text, 'Received. Codex is working on it.');
-  assert.match(replies[1].text, /ran: run tests/);
+  assert.equal(cards[0].card.header.title.content, 'FCoding task accepted');
+  assert.equal(cards[1].card.header.title.content, 'FCoding task finished');
 });
-
 
 test('WS dispatcher sends a callback test card for cardtest command', async () => {
   const cards = [];
   const dispatcher = createWsEventDispatcher({
     config: makeConfig(),
+    runtimeState: createRuntimeState({ config: makeConfig() }),
     feishuClient: {
       async replyInteractiveCard(messageId, card) {
         cards.push({ messageId, card });
@@ -193,7 +195,10 @@ test('WS dispatcher sends a callback test card for cardtest command', async () =
 });
 
 test('card action handler returns an updated card for callback test cards', async () => {
-  const handler = createCardActionTriggerHandler({ logger: { info() {} } });
+  const handler = createCardActionTriggerHandler({
+    logger: { info() {} },
+    runtimeState: createRuntimeState({ config: makeConfig() })
+  });
   const response = await handler({
     operator: { open_id: 'ou-1' },
     action: { value: { fcoding_action: 'callback_test', nonce: 'n-1' } }
@@ -203,11 +208,32 @@ test('card action handler returns an updated card for callback test cards', asyn
   assert.match(response.elements[0].text.content, /callback_test/);
 });
 
+test('card action handler expands stored task output cards', async () => {
+  const runtimeState = createRuntimeState({ config: makeConfig() });
+  const cardId = runtimeState.createCardState('task_result', {
+    task: { prompt: 'fix tests' },
+    result: { ok: true, output: 'full output', durationMs: 1200 }
+  });
+  const handler = createCardActionTriggerHandler({
+    logger: { info() {} },
+    runtimeState
+  });
+
+  const response = await handler({
+    operator: { open_id: 'ou-1' },
+    action: { value: { fcoding_action: 'expand_output', card_id: cardId } }
+  });
+
+  assert.equal(response.header.title.content, 'FCoding task finished');
+  assert.match(response.elements[0].text.content, /full output/);
+});
+
 test('WS dispatcher routes card action callbacks through the official card handler', async () => {
   FakeCardActionHandler.last = null;
   const dispatcher = createWsEventDispatcher({
     config: makeConfig(),
-    feishuClient: { replyText: async () => {} },
+    runtimeState: createRuntimeState({ config: makeConfig() }),
+    feishuClient: { replyInteractiveCard: async () => {} },
     logger: { info() {}, error() {} },
     lark: fakeLark
   });
@@ -231,7 +257,8 @@ test('WS dispatcher adds empty headers for legacy card callback payloads', async
   FakeCardActionHandler.last = null;
   const dispatcher = createWsEventDispatcher({
     config: makeConfig(),
-    feishuClient: { replyText: async () => {} },
+    runtimeState: createRuntimeState({ config: makeConfig() }),
+    feishuClient: { replyInteractiveCard: async () => {} },
     logger: { info() {}, error() {} },
     lark: fakeLark
   });
@@ -317,7 +344,8 @@ test('starts the official Feishu WS client with an event dispatcher', async () =
   FakeWsClient.instances = [];
   const wsClient = await startWsEventClient({
     config: makeConfig(),
-    feishuClient: { replyText: async () => {} },
+    runtimeState: createRuntimeState({ config: makeConfig() }),
+    feishuClient: { replyInteractiveCard: async () => {} },
     logger: { info() {}, error() {} },
     lark: fakeLark
   });

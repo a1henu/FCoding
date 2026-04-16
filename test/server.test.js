@@ -3,6 +3,7 @@ import test from 'node:test';
 import { once } from 'node:events';
 import { calculateSignature } from '../src/feishu/crypto.js';
 import { loadConfig } from '../src/config.js';
+import { createRuntimeState } from '../src/runtime-state.js';
 import { createServer, formatElapsed, processCodexTask } from '../src/server.js';
 
 function makeConfig(overrides = {}) {
@@ -57,15 +58,15 @@ function textMessagePayload({ eventId = 'evt-1', text = 'codex run tests' } = {}
   };
 }
 
-
 test('formats elapsed time for progress replies', () => {
   assert.equal(formatElapsed(999), '0s');
   assert.equal(formatElapsed(61_000), '1m 1s');
 });
 
 test('sends periodic Codex progress replies while a task is running', async () => {
-  const replies = [];
+  const cards = [];
   const config = makeConfig({ codex: { progressIntervalMs: 5 } });
+  const runtimeState = createRuntimeState({ config });
 
   await processCodexTask({
     task: {
@@ -74,9 +75,10 @@ test('sends periodic Codex progress replies while a task is running', async () =
       prompt: 'slow task'
     },
     config,
+    runtimeState,
     feishuClient: {
-      async replyText(messageId, text) {
-        replies.push({ messageId, text });
+      async replyInteractiveCard(messageId, card) {
+        cards.push({ messageId, card });
       }
     },
     codexRunner: async () => {
@@ -86,16 +88,43 @@ test('sends periodic Codex progress replies while a task is running', async () =
     logger: { error() {} }
   });
 
-  assert.equal(replies[0].text, 'Received. Codex is working on it.');
-  assert.ok(replies.some((reply) => /Codex is still working\. Elapsed:/.test(reply.text)));
-  assert.match(replies.at(-1).text, /done/);
+  assert.equal(cards[0].card.header.title.content, 'FCoding task accepted');
+  assert.ok(cards.some((entry) => entry.card.header.title.content === 'FCoding task running'));
+  assert.equal(cards.at(-1).card.header.title.content, 'FCoding task finished');
 });
 
+test('handles built-in command prompts before running codex', async () => {
+  const cards = [];
+  const config = makeConfig();
+  const runtimeState = createRuntimeState({ config });
+
+  await processCodexTask({
+    task: {
+      eventId: 'evt-status',
+      messageId: 'msg-status',
+      prompt: 'status'
+    },
+    config,
+    runtimeState,
+    feishuClient: {
+      async replyInteractiveCard(messageId, card) {
+        cards.push({ messageId, card });
+      }
+    },
+    codexRunner: async () => {
+      throw new Error('codex runner should not be called for status');
+    },
+    logger: { error() {} }
+  });
+
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].card.header.title.content, 'FCoding status');
+});
 
 test('answers Feishu url verification challenges', async () => {
   const server = createServer({
     config: makeConfig(),
-    feishuClient: { replyText: async () => {} },
+    feishuClient: { replyInteractiveCard: async () => {} },
     codexRunner: async () => ({ ok: true, output: 'unused', durationMs: 1 }),
     logger: { error() {} }
   });
@@ -112,17 +141,18 @@ test('answers Feishu url verification challenges', async () => {
 });
 
 test('accepts a message and processes it asynchronously', async () => {
-  const replies = [];
+  const cards = [];
   let resolveDone;
   const done = new Promise((resolve) => {
     resolveDone = resolve;
   });
   const server = createServer({
     config: makeConfig(),
+    runtimeState: createRuntimeState({ config: makeConfig() }),
     feishuClient: {
-      async replyText(messageId, text) {
-        replies.push({ messageId, text });
-        if (replies.length === 2) {
+      async replyInteractiveCard(messageId, card) {
+        cards.push({ messageId, card });
+        if (cards.length === 2) {
           resolveDone();
         }
       }
@@ -140,15 +170,15 @@ test('accepts a message and processes it asynchronously', async () => {
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { ok: true, accepted: true });
     await done;
-    assert.equal(replies[0].text, 'Received. Codex is working on it.');
-    assert.match(replies[1].text, /ran: run tests/);
+    assert.equal(cards[0].card.header.title.content, 'FCoding task accepted');
+    assert.equal(cards[1].card.header.title.content, 'FCoding task finished');
   });
 });
 
 test('deduplicates repeated events', async () => {
   const server = createServer({
     config: makeConfig({ feishu: { sendAck: false } }),
-    feishuClient: { replyText: async () => {} },
+    feishuClient: { replyInteractiveCard: async () => {} },
     codexRunner: async () => ({ ok: true, output: 'ok', durationMs: 1 }),
     logger: { error() {} }
   });
@@ -169,7 +199,7 @@ test('rejects bad Feishu signatures when enabled', async () => {
   });
   const server = createServer({
     config,
-    feishuClient: { replyText: async () => {} },
+    feishuClient: { replyInteractiveCard: async () => {} },
     codexRunner: async () => ({ ok: true, output: 'unused', durationMs: 1 }),
     logger: { error() {} }
   });

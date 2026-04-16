@@ -1,8 +1,14 @@
 import * as Lark from '@larksuiteoapi/node-sdk';
 import { EventDeduper, extractCodexTask } from './events.js';
 import { processCodexTask } from '../server.js';
-import { buildCallbackReceivedCard, buildCallbackTestCard } from './cards.js';
+import {
+  buildCallbackReceivedCard,
+  buildCallbackTestCard,
+  buildCommandResultCard,
+  buildTaskStatusCard
+} from './cards.js';
 import { runCodexTask } from '../codex/runner.js';
+import { createRuntimeState } from '../runtime-state.js';
 
 export function normalizeWsMessageEvent(data) {
   const message = data?.message || {};
@@ -21,7 +27,19 @@ export function normalizeWsMessageEvent(data) {
   };
 }
 
-export function createCardActionTriggerHandler({ logger = console } = {}) {
+function buildExpiredCardStateCard() {
+  return buildCommandResultCard({
+    title: 'FCoding card expired',
+    status: 'error',
+    summary: 'This card action is no longer available.',
+    details: ['Run the command again to generate a fresh card.']
+  });
+}
+
+export function createCardActionTriggerHandler({
+  logger = console,
+  runtimeState
+} = {}) {
   return async (data) => {
     const value = data?.action?.value || {};
     logger.info?.({ value, openId: data?.operator?.open_id }, 'Received Feishu card action callback');
@@ -30,6 +48,21 @@ export function createCardActionTriggerHandler({ logger = console } = {}) {
       return buildCallbackReceivedCard({
         action: value.fcoding_action,
         receivedAt: new Date().toISOString()
+      });
+    }
+
+    if (value.fcoding_action === 'expand_output' || value.fcoding_action === 'collapse_output') {
+      const state = runtimeState?.getCardState(value.card_id);
+      if (!state || state.type !== 'task_result') {
+        return buildExpiredCardStateCard();
+      }
+
+      return buildTaskStatusCard({
+        task: state.payload.task,
+        runtime: runtimeState.snapshot(),
+        result: state.payload.result,
+        cardId: value.card_id,
+        expanded: value.fcoding_action === 'expand_output'
       });
     }
 
@@ -149,6 +182,7 @@ export function createWsEventDispatcher({
   feishuClient,
   codexRunner = runCodexTask,
   deduper = new EventDeduper(),
+  runtimeState = createRuntimeState({ config }),
   logger = console,
   lark = Lark
 }) {
@@ -180,7 +214,14 @@ export function createWsEventDispatcher({
       }
 
       setImmediate(() => {
-        processCodexTask({ task, config, feishuClient, codexRunner, logger });
+        processCodexTask({
+          task,
+          config,
+          feishuClient,
+          codexRunner,
+          runtimeState,
+          logger
+        });
       });
     }
   });
@@ -189,7 +230,7 @@ export function createWsEventDispatcher({
     encryptKey: config.feishu.encryptKey,
     verificationToken: config.feishu.verificationToken,
     loggerLevel: lark.LoggerLevel?.info
-  }, createCardActionTriggerHandler({ logger }));
+  }, createCardActionTriggerHandler({ logger, runtimeState }));
 
   return {
     eventDispatcher,
@@ -212,6 +253,7 @@ export async function startWsEventClient({
   feishuClient,
   codexRunner = runCodexTask,
   deduper = new EventDeduper(),
+  runtimeState = createRuntimeState({ config }),
   logger = console,
   lark = Lark
 }) {
@@ -233,6 +275,7 @@ export async function startWsEventClient({
       feishuClient,
       codexRunner,
       deduper,
+      runtimeState,
       logger,
       lark
     })

@@ -1,6 +1,8 @@
 import http from 'node:http';
 import { URL } from 'node:url';
-import { runCodexTask, formatCodexResult } from './codex/runner.js';
+import { runCodexTask } from './codex/runner.js';
+import { handleBotCommand } from './commands.js';
+import { createRuntimeState } from './runtime-state.js';
 import { decryptPayload, verifySignature } from './feishu/crypto.js';
 import {
   EventDeduper,
@@ -8,6 +10,10 @@ import {
   extractCodexTask,
   parseFeishuPayload
 } from './feishu/events.js';
+import {
+  buildCommandResultCard,
+  buildTaskStatusCard
+} from './feishu/cards.js';
 
 export function sendJson(response, statusCode, payload) {
   const body = JSON.stringify(payload);
@@ -77,6 +83,7 @@ export function startProgressReplies({
   task,
   feishuClient,
   intervalMs,
+  runtimeState,
   logger = console,
   now = () => Date.now()
 }) {
@@ -93,9 +100,17 @@ export function startProgressReplies({
 
     inFlight = true;
     try {
-      await feishuClient.replyText(
+      await feishuClient.replyInteractiveCard(
         task.messageId,
-        `Codex is still working. Elapsed: ${formatElapsed(now() - startedAt)}.`
+        buildCommandResultCard({
+          title: 'FCoding task running',
+          status: 'running',
+          summary: `Codex is still working on \`${task.prompt}\`.`,
+          details: [
+            `Elapsed: ${formatElapsed(now() - startedAt)}`,
+            `Workspace: \`${runtimeState.snapshot().workspace}\``
+          ]
+        })
       );
     } catch (error) {
       logger.error({ error, eventId: task.eventId }, 'Failed to send Codex progress update');
@@ -108,34 +123,82 @@ export function startProgressReplies({
   return () => clearInterval(timer);
 }
 
-export async function processCodexTask({ task, config, feishuClient, codexRunner, logger }) {
+function normalizeErrorMessage(error) {
+  return error?.message || String(error);
+}
+
+export async function processCodexTask({
+  task,
+  config,
+  feishuClient,
+  codexRunner,
+  runtimeState,
+  logger
+}) {
   let stopProgressReplies = () => {};
 
   try {
+    const commandResult = await handleBotCommand({ task, runtimeState, logger });
+    if (commandResult.handled) {
+      await feishuClient.replyInteractiveCard(task.messageId, commandResult.card);
+      return;
+    }
+
     if (config.feishu.sendAck) {
-      await feishuClient.replyText(task.messageId, 'Received. Codex is working on it.');
+      await feishuClient.replyInteractiveCard(
+        task.messageId,
+        buildCommandResultCard({
+          title: 'FCoding task accepted',
+          status: 'running',
+          summary: `Working on \`${task.prompt}\`.`,
+          details: [
+            `Workspace: \`${runtimeState.snapshot().workspace}\``,
+            `Model: ${runtimeState.snapshot().model ? `\`${runtimeState.snapshot().model}\`` : 'default'}`
+          ]
+        })
+      );
     }
 
     stopProgressReplies = startProgressReplies({
       task,
       feishuClient,
       intervalMs: config.codex.progressIntervalMs,
+      runtimeState,
       logger
     });
 
     const result = await codexRunner({
       prompt: task.prompt,
-      ...config.codex
+      ...runtimeState.buildCodexRunOptions(config.codex)
     });
     stopProgressReplies();
-    await feishuClient.replyText(task.messageId, formatCodexResult(result));
+
+    const cardId = runtimeState.createCardState('task_result', {
+      task,
+      result
+    });
+    await feishuClient.replyInteractiveCard(
+      task.messageId,
+      buildTaskStatusCard({
+        task,
+        runtime: runtimeState.snapshot(),
+        result,
+        cardId,
+        expanded: false
+      })
+    );
   } catch (error) {
     stopProgressReplies();
     logger.error({ error, eventId: task.eventId }, 'Codex task failed');
     try {
-      await feishuClient.replyText(
+      await feishuClient.replyInteractiveCard(
         task.messageId,
-        `Codex bridge failed before completion.\n\n${error.message}`
+        buildCommandResultCard({
+          title: 'FCoding task failed',
+          status: 'error',
+          summary: 'FCoding failed before completion.',
+          details: [normalizeErrorMessage(error)]
+        })
       );
     } catch (replyError) {
       logger.error({ error: replyError, eventId: task.eventId }, 'Failed to report task error to Feishu');
@@ -148,6 +211,7 @@ export function createServer({
   feishuClient,
   codexRunner = runCodexTask,
   deduper = new EventDeduper(),
+  runtimeState = createRuntimeState({ config }),
   logger = console
 }) {
   async function handleFeishuCallback(request, response) {
@@ -182,7 +246,14 @@ export function createServer({
 
       sendJson(response, 200, { ok: true, accepted: true });
       setImmediate(() => {
-        processCodexTask({ task, config, feishuClient, codexRunner, logger });
+        processCodexTask({
+          task,
+          config,
+          feishuClient,
+          codexRunner,
+          runtimeState,
+          logger
+        });
       });
     } catch (error) {
       const status = error instanceof FeishuAuthError ? 401 : 400;

@@ -1,5 +1,6 @@
 import { loadDotEnv } from './dotenv.js';
 import { loadConfig } from './config.js';
+import { createRuntimeState } from './runtime-state.js';
 import { FeishuClient } from './feishu/client.js';
 import { createServer } from './server.js';
 import { startWsEventClient } from './feishu/ws.js';
@@ -8,14 +9,15 @@ loadDotEnv();
 
 const config = loadConfig();
 const feishuClient = new FeishuClient(config.feishu);
+const runtimeState = createRuntimeState({ config });
 let server = null;
 let wsClient = null;
 
 if (config.eventMode === 'ws') {
-  wsClient = await startWsEventClient({ config, feishuClient });
+  wsClient = await startWsEventClient({ config, feishuClient, runtimeState });
   console.log('FCoding Feishu WS client started');
 } else if (config.eventMode === 'http') {
-  server = createServer({ config, feishuClient });
+  server = createServer({ config, feishuClient, runtimeState });
   server.listen(config.port, config.host, () => {
     console.log(`FCoding listening on http://${config.host}:${config.port}`);
   });
