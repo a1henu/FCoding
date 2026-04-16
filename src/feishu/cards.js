@@ -38,3 +38,30 @@ export function buildCallbackTestCard({ nonce = String(Date.now()) } = {}) {
     ]
   };
 }
+
+export function buildCallbackReceivedCard({
+  receivedAt = new Date().toISOString(),
+  action = 'callback_test'
+} = {}) {
+  return {
+    config: {
+      wide_screen_mode: true
+    },
+    header: {
+      title: {
+        tag: 'plain_text',
+        content: 'FCoding callback received'
+      },
+      template: 'green'
+    },
+    elements: [
+      {
+        tag: 'div',
+        text: {
+          tag: 'lark_md',
+          content: `Long-connection callback received.\n\nAction: ${action}\nTime: ${receivedAt}`
+        }
+      }
+    ]
+  };
+}

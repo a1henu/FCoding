@@ -20,6 +20,37 @@ class FakeEventDispatcher {
     this.handlers = handlers;
     return this;
   }
+
+  async invoke(data) {
+    const type = data?.header?.event_type || data?.event?.type || data?.event_type || data?.type;
+    const parsed = data?.schema
+      ? { ...data.header, ...data.event }
+      : data?.event
+        ? { ...data.event }
+        : data;
+
+    return this.handlers[type](parsed);
+  }
+}
+
+class FakeCardActionHandler {
+  static last = null;
+
+  constructor(params, handler) {
+    this.params = params;
+    this.handler = handler;
+    this.invocations = [];
+    FakeCardActionHandler.last = this;
+  }
+
+  async invoke(data) {
+    this.invocations.push(data);
+    const parsed = data?.schema
+      ? { ...data.header, ...data.event }
+      : data;
+
+    return this.handler(parsed);
+  }
 }
 
 class FakeWsClient {
@@ -42,6 +73,7 @@ class FakeWsClient {
 
 const fakeLark = {
   EventDispatcher: FakeEventDispatcher,
+  CardActionHandler: FakeCardActionHandler,
   WSClient: FakeWsClient,
   LoggerLevel: { info: 3 }
 };
@@ -71,6 +103,17 @@ function wsPayload(overrides = {}) {
       content: JSON.stringify({ text: 'codex run tests' })
     },
     ...overrides
+  };
+}
+
+function wsEnvelope(event = wsPayload(), eventType = 'im.message.receive_v1') {
+  return {
+    schema: '2.0',
+    header: {
+      event_id: event.event_id,
+      event_type: eventType
+    },
+    event
   };
 }
 
@@ -113,7 +156,7 @@ test('WS dispatcher schedules Codex work and returns quickly', async () => {
     lark: fakeLark
   });
 
-  await dispatcher.handlers['im.message.receive_v1'](wsPayload());
+  await dispatcher.invoke(wsEnvelope());
   await done;
 
   assert.equal(replies[0].text, 'Received. Codex is working on it.');
@@ -134,31 +177,71 @@ test('WS dispatcher sends a callback test card for cardtest command', async () =
     lark: fakeLark
   });
 
-  await dispatcher.handlers['im.message.receive_v1'](wsPayload({
+  await dispatcher.invoke(wsEnvelope(wsPayload({
     message: {
       message_id: 'msg-card',
       chat_id: 'chat-1',
       message_type: 'text',
       content: JSON.stringify({ text: 'codex cardtest' })
     }
-  }));
+  })));
 
   assert.equal(cards.length, 1);
   assert.equal(cards[0].messageId, 'msg-card');
   assert.equal(cards[0].card.elements[1].actions[0].value.fcoding_action, 'callback_test');
 });
 
-test('card action handler returns a success toast for callback test cards', async () => {
+test('card action handler returns an updated card for callback test cards', async () => {
   const handler = createCardActionTriggerHandler({ logger: { info() {} } });
   const response = await handler({
     operator: { open_id: 'ou-1' },
     action: { value: { fcoding_action: 'callback_test', nonce: 'n-1' } }
   });
 
-  assert.equal(response.toast.type, 'success');
-  assert.match(response.toast.i18n.zh_cn, /长连接/);
+  assert.equal(response.header.template, 'green');
+  assert.match(response.elements[0].text.content, /callback_test/);
 });
 
+test('WS dispatcher routes card action callbacks through the official card handler', async () => {
+  FakeCardActionHandler.last = null;
+  const dispatcher = createWsEventDispatcher({
+    config: makeConfig(),
+    feishuClient: { replyText: async () => {} },
+    logger: { info() {}, error() {} },
+    lark: fakeLark
+  });
+
+  const response = await dispatcher.invoke({
+    schema: '2.0',
+    header: {
+      event_type: 'card.action.trigger'
+    },
+    event: {
+      operator: { open_id: 'ou-1' },
+      action: { value: { fcoding_action: 'callback_test', nonce: 'n-1' } }
+    }
+  });
+
+  assert.equal(FakeCardActionHandler.last.invocations.length, 1);
+  assert.equal(response.header.template, 'green');
+});
+
+test('WS dispatcher adds empty headers for legacy card callback payloads', async () => {
+  FakeCardActionHandler.last = null;
+  const dispatcher = createWsEventDispatcher({
+    config: makeConfig(),
+    feishuClient: { replyText: async () => {} },
+    logger: { info() {}, error() {} },
+    lark: fakeLark
+  });
+
+  await dispatcher.invoke({
+    operator: { open_id: 'ou-1' },
+    action: { value: { fcoding_action: 'callback_test', nonce: 'n-1' } }
+  });
+
+  assert.deepEqual(FakeCardActionHandler.last.invocations[0].headers, {});
+});
 
 test('starts the official Feishu WS client with an event dispatcher', async () => {
   FakeWsClient.instances = [];
@@ -172,5 +255,7 @@ test('starts the official Feishu WS client with an event dispatcher', async () =
   assert.equal(wsClient, FakeWsClient.instances[0]);
   assert.equal(wsClient.params.appId, 'app-id');
   assert.equal(wsClient.params.appSecret, 'secret');
-  assert.ok(wsClient.startedWith.eventDispatcher instanceof FakeEventDispatcher);
+  assert.equal(typeof wsClient.startedWith.eventDispatcher.invoke, 'function');
+  assert.ok(FakeEventDispatcher.last instanceof FakeEventDispatcher);
+  assert.ok(FakeCardActionHandler.last instanceof FakeCardActionHandler);
 });

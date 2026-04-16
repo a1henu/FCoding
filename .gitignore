@@ -206,6 +206,10 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Codex local state
+.codex
+.codex/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
