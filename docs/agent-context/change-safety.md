@@ -13,6 +13,7 @@ These areas are low-risk when changes are small and tested.
 - `src/codex/runner.js` formatting-only tweaks with tests.
 - `.github/workflows/test.yml` comments or naming changes that do not alter commands.
 - `.env.example` comments that do not change variable names or defaults.
+- ignored `.env.api` local content, as long as it is not staged or printed.
 
 Expected verification:
 
@@ -39,6 +40,10 @@ These areas affect multiple modules or user-visible behavior.
 - `src/runtime-state.js`
   - In-memory runtime overrides and temporary card state.
   - Changes can invalidate card callbacks or real Codex command options.
+
+- `src/dotenv.js` and `src/index.js` dotenv loading
+  - Startup secret file behavior.
+  - Incorrect load order can make `.env.api` ineffective or unexpectedly override `.env`.
 
 - `src/feishu/events.js`
   - Controls access to local Codex execution.
@@ -107,6 +112,7 @@ Expected verification:
 
 - `.env`
 - `.env.*` except `.env.example`
+- `.env.api`
 - `.codex`
 - `.codex/`
 - `node_modules/`

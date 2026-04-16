@@ -28,6 +28,30 @@ function cloneSnapshot(state, env) {
   };
 }
 
+function readInitialAuthMode(env) {
+  const mode = env.FCODING_AUTH_MODE || 'chatgpt';
+  if (!['chatgpt', 'api'].includes(mode)) {
+    throw new Error(`Unsupported auth mode: ${mode}`);
+  }
+
+  return mode;
+}
+
+function readInitialApiBaseUrl(env) {
+  const baseUrl = env.FCODING_API_BASE_URL || DEFAULT_API_BASE_URL;
+  new URL(baseUrl);
+  return baseUrl;
+}
+
+function readInitialApiKeyEnvVar(env) {
+  const envVarName = env.FCODING_API_KEY_ENV_VAR || DEFAULT_API_KEY_ENV_VAR;
+  if (!isValidEnvVarName(envVarName)) {
+    throw new Error('Invalid environment variable name');
+  }
+
+  return envVarName;
+}
+
 export function isValidEnvVarName(value) {
   return /^[A-Za-z_][A-Za-z0-9_]*$/.test(String(value || ''));
 }
@@ -45,10 +69,10 @@ export function createRuntimeState({
   const state = {
     workspace: config.codex.cwd,
     defaultWorkspace: config.codex.cwd,
-    model: '',
-    authMode: 'chatgpt',
-    apiBaseUrl: DEFAULT_API_BASE_URL,
-    apiKeyEnvVar: DEFAULT_API_KEY_ENV_VAR,
+    model: env.FCODING_MODEL || '',
+    authMode: readInitialAuthMode(env),
+    apiBaseUrl: readInitialApiBaseUrl(env),
+    apiKeyEnvVar: readInitialApiKeyEnvVar(env),
     apiKey: ''
   };
   const cards = new Map();

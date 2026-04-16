@@ -39,18 +39,20 @@ Examples:
 - new env var
 - changed default in `src/config.js`
 - `.env.example` update
+- `.env.api` loading behavior
 - setup docs update tied to config
 
 Minimum verification:
 
 ```bash
-node --test test/config.test.js test/dotenv.test.js
+node --test test/config.test.js test/dotenv.test.js test/runtime-state.test.js
 npm test
 ```
 
 Also check:
 
 - `.env.example` contains no real secrets.
+- `.env.api` remains ignored and is never staged.
 - README and `docs/agent-installation.md` describe the new variable.
 - `src/index.js` startup still works conceptually for both `ws` and `http`.
 
@@ -185,6 +187,7 @@ Examples:
 
 - `src/commands.js`
 - `src/runtime-state.js`
+- `.env.api` startup defaults
 - workspace/model/auth command behavior
 - output card state and TTL
 

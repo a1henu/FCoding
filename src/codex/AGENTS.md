@@ -13,7 +13,7 @@ This directory owns the boundary between FCoding and the local Codex CLI process
 - Called from `src/server.js#processCodexTask`.
 - Indirectly used by long connection mode through `src/feishu/ws.js`, which schedules `processCodexTask`.
 - Config values come from `src/config.js` under `config.codex`.
-- Runtime overrides come from `src/runtime-state.js`, which can change `cwd`, append model args, and add API provider args/env.
+- Runtime overrides come from `src/runtime-state.js`, which can change `cwd`, append model args, and add API provider args/env. Startup can initialize these values from `.env.api`.
 
 ## Safer Changes
 

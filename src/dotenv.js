@@ -57,3 +57,13 @@ export function loadDotEnv(path = '.env', env = process.env) {
 
   return parsed;
 }
+
+export function loadDotEnvFiles(paths = ['.env'], env = process.env) {
+  const loaded = {};
+
+  for (const path of paths) {
+    loaded[path] = loadDotEnv(path, env);
+  }
+
+  return loaded;
+}

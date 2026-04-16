@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { loadDotEnv, parseDotEnv } from '../src/dotenv.js';
+import { loadDotEnv, loadDotEnvFiles, parseDotEnv } from '../src/dotenv.js';
 
 test('parses dotenv files with comments and quotes', () => {
   assert.deepEqual(parseDotEnv(`
@@ -29,4 +29,19 @@ test('loads dotenv values without overwriting existing env', () => {
 
   assert.deepEqual(loadDotEnv(file, env), { A: 'from-file', B: 'from-file' });
   assert.deepEqual(env, { A: 'existing', B: 'from-file' });
+});
+
+test('loads multiple dotenv files in order without overwriting existing values', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fcoding-env-files-'));
+  const first = path.join(dir, '.env');
+  const second = path.join(dir, '.env.api');
+  fs.writeFileSync(first, 'A=from-first\nB=from-first\n', 'utf8');
+  fs.writeFileSync(second, 'B=from-second\nC=from-second\n', 'utf8');
+  const env = {};
+
+  assert.deepEqual(loadDotEnvFiles([first, second], env), {
+    [first]: { A: 'from-first', B: 'from-first' },
+    [second]: { B: 'from-second', C: 'from-second' }
+  });
+  assert.deepEqual(env, { A: 'from-first', B: 'from-first', C: 'from-second' });
 });

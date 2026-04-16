@@ -37,10 +37,12 @@ The default runtime is Feishu long connection through `@larksuiteoapi/node-sdk`.
   - Stores process-local workspace/model/auth overrides.
   - Stores temporary card state for output expand/collapse actions.
   - Builds final Codex run options from base config plus runtime overrides.
+  - Initializes model/auth/API base URL/API key env name from environment, which can come from `.env.api`.
 
 - `src/dotenv.js`
   - Lightweight local `.env` loader.
   - Does not overwrite variables already exported by the shell.
+  - Startup loads `.env` and then `.env.api`; this lets local API-mode secrets stay in a separate ignored file.
 
 ## Feishu Layer
 
@@ -109,6 +111,16 @@ Runtime state may append:
 - `-m <model>` when `codex model set <name>` was used.
 - `-c model_provider=...` and related provider settings when API auth mode is active.
 - an API key environment variable if it is available in process env or staged in memory.
+
+API-mode startup defaults can be supplied by ignored `.env.api`:
+
+```dotenv
+FCODING_AUTH_MODE=api
+FCODING_MODEL=<model>
+FCODING_API_BASE_URL=<openai-compatible-base-url>
+FCODING_API_KEY_ENV_VAR=OPENAI_API_KEY
+OPENAI_API_KEY=<secret>
+```
 
 ## Built-In Bot Commands
 
@@ -204,6 +216,7 @@ npm test
 - Long-running Codex tasks send periodic progress cards.
 - Built-in commands intentionally bypass Codex execution.
 - Runtime state is process-local and resets on restart.
+- Startup reloads `.env.api`, so API-mode defaults can survive restart without committing secrets.
 - GitHub Actions runs `npm ci` and `npm test` on push and pull request.
 - The service is dependency-light and uses Node's built-in test runner.
 - The app is intentionally local-first; production hardening should focus on process supervision, allowlists, and workspace isolation.

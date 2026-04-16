@@ -25,6 +25,7 @@ Core runtime flow:
 - `.github/workflows/test.yml`: GitHub Actions workflow that runs `npm ci` and `npm test` on push and pull request.
 - `.env.example`: safe configuration template. Keep tracked and secret-free.
 - `.env`: local secrets and runtime config. Must stay untracked.
+- `.env.api`: optional local API-mode secret overlay. Must stay untracked.
 - `.codex`: local Codex state/config. Must stay untracked.
 - `package.json`: source of truth for scripts and runtime dependency declarations.
 
@@ -36,6 +37,7 @@ Core runtime flow:
 - HTTP callback behavior: `src/server.js`.
 - Built-in bot commands: `src/commands.js`.
 - Runtime session state and Codex run overrides: `src/runtime-state.js`.
+- Local env loading: `src/dotenv.js`; startup loads `.env` and `.env.api`.
 - Feishu task extraction and allowlists: `src/feishu/events.js`.
 - Feishu outbound API calls: `src/feishu/client.js`.
 - Codex execution contract: `src/codex/runner.js`.
@@ -58,6 +60,7 @@ Use `npm start` only when you need to run the local service. It reads `.env` and
 ## Global Development Constraints
 
 - Never commit `.env`, `.env.*`, `.codex`, `node_modules`, logs, or runtime secrets.
+- `.env.api` may contain `OPENAI_API_KEY` and FCoding API-mode defaults; keep it ignored and never print its full contents.
 - Do not print `FEISHU_APP_SECRET`, tenant tokens, full `.env`, or user private identifiers unless explicitly needed and redacted.
 - Prefer long connection mode. HTTP mode is supported but not the default user path.
 - Keep event handlers quick. Long Codex work should run asynchronously after Feishu has been acknowledged.

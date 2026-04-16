@@ -24,11 +24,21 @@ Implication: Shared parsing changes must not silently break HTTP mode.
 
 Status: decided
 
-Reason: Feishu app credentials and local runtime settings are sensitive and environment-specific.
+Reason: Feishu app credentials and local runtime settings are sensitive and environment-specific. API-mode secrets may be isolated into `.env.api`.
 
-Evidence: `.gitignore` ignores `.env` and `.env.*`; `.env.example` is tracked as safe template; `src/dotenv.js` loads `.env` at startup.
+Evidence: `.gitignore` ignores `.env`, `.env.*`, and `.env.api`; `.env.example` is tracked as safe template; `src/index.js` loads `.env` and `.env.api` at startup.
 
-Implication: Agents must never commit real `.env` values or print app secrets.
+Implication: Agents must never commit real `.env`/`.env.api` values or print app/API secrets.
+
+## API-Mode Runtime Defaults Can Come From `.env.api`
+
+Status: decided
+
+Reason: Phone-driven API mode needs the service process to already have an API key and provider defaults available before Feishu commands switch auth mode.
+
+Evidence: `src/index.js` loads `.env.api`; `src/runtime-state.js` reads `FCODING_AUTH_MODE`, `FCODING_MODEL`, `FCODING_API_BASE_URL`, and `FCODING_API_KEY_ENV_VAR`.
+
+Implication: `.env.api` is the preferred local file for API keys and API-mode startup defaults. Restarting the service reloads these defaults, while in-memory command changes still reset on restart.
 
 ## Empty Allowlists Mean Allow All For That Identifier Type
 
@@ -64,7 +74,7 @@ Implication: User messages such as `codex status` do not run Codex. Command name
 
 Status: decided by current implementation
 
-Reason: `createRuntimeState()` stores workspace/model/auth overrides and card state in process memory.
+Reason: `createRuntimeState()` stores workspace/model/auth overrides and card state in process memory, seeded from environment where configured.
 
 Evidence: `src/runtime-state.js`, `test/runtime-state.test.js`.
 

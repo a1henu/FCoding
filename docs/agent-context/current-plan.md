@@ -12,7 +12,7 @@ The repository has a working baseline:
 - Built-in commands now cover help/status/workspace/model/login configuration flows.
 - Final task results are sent as cards with output expand/collapse callbacks backed by in-memory runtime card state.
 - GitHub Actions runs `npm ci` and `npm test` on push and pull request.
-- Tests are fast and local: currently 48 Node tests.
+- Tests are fast and local: currently 51 Node tests.
 - Agent-facing installation and project overview docs exist.
 
 The next phase is better suited to tightening runtime command behavior and interaction state before deeper Codex streaming/permission work. Avoid broad refactors until command/state contracts are stable.
