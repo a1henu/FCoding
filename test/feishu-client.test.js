@@ -37,6 +37,32 @@ test('gets tenant token and replies to a message', async () => {
   });
 });
 
+
+test('replies with interactive cards', async () => {
+  const calls = [];
+  const client = new FeishuClient({
+    appId: 'app-id',
+    appSecret: 'secret',
+    baseUrl: 'https://feishu.test/open-apis',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith('/auth/v3/tenant_access_token/internal')) {
+        return jsonResponse({ code: 0, tenant_access_token: 'tenant-token', expire: 7200 });
+      }
+      return jsonResponse({ code: 0 });
+    }
+  });
+
+  const card = { elements: [], header: { title: { tag: 'plain_text', content: 'Test' } } };
+  await client.replyInteractiveCard('msg-1', card);
+
+  assert.deepEqual(JSON.parse(calls[1].options.body), {
+    msg_type: 'interactive',
+    content: JSON.stringify(card)
+  });
+});
+
+
 test('caches tenant tokens until expiry', async () => {
   let now = 1000;
   let tokenRequests = 0;

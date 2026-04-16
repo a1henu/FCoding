@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadConfig } from '../src/config.js';
 import {
+  createCardActionTriggerHandler,
   createWsEventDispatcher,
   normalizeWsMessageEvent,
   startWsEventClient
@@ -118,6 +119,46 @@ test('WS dispatcher schedules Codex work and returns quickly', async () => {
   assert.equal(replies[0].text, 'Received. Codex is working on it.');
   assert.match(replies[1].text, /ran: run tests/);
 });
+
+
+test('WS dispatcher sends a callback test card for cardtest command', async () => {
+  const cards = [];
+  const dispatcher = createWsEventDispatcher({
+    config: makeConfig(),
+    feishuClient: {
+      async replyInteractiveCard(messageId, card) {
+        cards.push({ messageId, card });
+      }
+    },
+    logger: { info() {}, error() {} },
+    lark: fakeLark
+  });
+
+  await dispatcher.handlers['im.message.receive_v1'](wsPayload({
+    message: {
+      message_id: 'msg-card',
+      chat_id: 'chat-1',
+      message_type: 'text',
+      content: JSON.stringify({ text: 'codex cardtest' })
+    }
+  }));
+
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].messageId, 'msg-card');
+  assert.equal(cards[0].card.elements[1].actions[0].value.fcoding_action, 'callback_test');
+});
+
+test('card action handler returns a success toast for callback test cards', async () => {
+  const handler = createCardActionTriggerHandler({ logger: { info() {} } });
+  const response = await handler({
+    operator: { open_id: 'ou-1' },
+    action: { value: { fcoding_action: 'callback_test', nonce: 'n-1' } }
+  });
+
+  assert.equal(response.toast.type, 'success');
+  assert.match(response.toast.i18n.zh_cn, /长连接/);
+});
+
 
 test('starts the official Feishu WS client with an event dispatcher', async () => {
   FakeWsClient.instances = [];

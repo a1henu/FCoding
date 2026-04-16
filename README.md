@@ -56,6 +56,12 @@ npm start
 
 For long-connection mode, keep `npm start` running and use the Feishu console button to verify the connection state.
 
+To verify long-connection card callbacks, send this to the bot and click the returned card button:
+
+```text
+codex cardtest
+```
+
 Health check is available only in HTTP webhook mode:
 
 ```bash

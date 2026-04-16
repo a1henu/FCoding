@@ -68,6 +68,18 @@ export class FeishuClient {
     return token;
   }
 
+  async replyInteractiveCard(messageId, card) {
+    const token = await this.getTenantAccessToken();
+    return this.requestJson(`/im/v1/messages/${encodeURIComponent(messageId)}/reply`, {
+      method: 'POST',
+      token,
+      body: {
+        msg_type: 'interactive',
+        content: JSON.stringify(card)
+      }
+    });
+  }
+
   async replyText(messageId, text) {
     const token = await this.getTenantAccessToken();
     const chunks = splitText(text, this.maxReplyChars);

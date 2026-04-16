@@ -1,6 +1,7 @@
 import * as Lark from '@larksuiteoapi/node-sdk';
 import { EventDeduper, extractCodexTask } from './events.js';
 import { processCodexTask } from '../server.js';
+import { buildCallbackTestCard } from './cards.js';
 import { runCodexTask } from '../codex/runner.js';
 
 export function normalizeWsMessageEvent(data) {
@@ -18,6 +19,37 @@ export function normalizeWsMessageEvent(data) {
     sender,
     message
   };
+}
+
+export function createCardActionTriggerHandler({ logger = console } = {}) {
+  return async (data) => {
+    const value = data?.action?.value || {};
+    logger.info?.({ value, openId: data?.operator?.open_id }, 'Received Feishu card action callback');
+
+    if (value.fcoding_action === 'callback_test') {
+      return {
+        toast: {
+          type: 'success',
+          content: 'FCoding received this card callback through long connection.',
+          i18n: {
+            zh_cn: 'FCoding 已通过长连接收到卡片回调。',
+            en_us: 'FCoding received this card callback through long connection.'
+          }
+        }
+      };
+    }
+
+    return {
+      toast: {
+        type: 'info',
+        content: 'FCoding received this card callback.'
+      }
+    };
+  };
+}
+
+function isCallbackTestPrompt(prompt) {
+  return /^(cardtest|callbacktest|test-card|测试卡片回调)$/i.test(prompt.trim());
 }
 
 export function createWsEventDispatcher({
@@ -43,10 +75,19 @@ export function createWsEventDispatcher({
         return;
       }
 
+      if (isCallbackTestPrompt(task.prompt)) {
+        await feishuClient.replyInteractiveCard(
+          task.messageId,
+          buildCallbackTestCard({ nonce: `${task.eventId}:${Date.now()}` })
+        );
+        return;
+      }
+
       setImmediate(() => {
         processCodexTask({ task, config, feishuClient, codexRunner, logger });
       });
-    }
+    },
+    'card.action.trigger': createCardActionTriggerHandler({ logger })
   });
 }
 
