@@ -11,6 +11,7 @@ These areas are low-risk when changes are small and tested.
 - `src/feishu/cards.js` new pure card builders with tests.
 - `src/feishu/client.js` additive client helpers with mocked fetch tests.
 - `src/codex/runner.js` formatting-only tweaks with tests.
+- `.github/workflows/test.yml` comments or naming changes that do not alter commands.
 - `.env.example` comments that do not change variable names or defaults.
 
 Expected verification:
@@ -29,7 +30,15 @@ These areas affect multiple modules or user-visible behavior.
 
 - `src/server.js`
   - Owns HTTP mode and shared `processCodexTask`.
-  - Changes can affect WS mode indirectly.
+  - Changes can affect WS mode indirectly and can alter built-in command handling.
+
+- `src/commands.js`
+  - User-facing runtime command protocol.
+  - Commands bypass Codex and can change workspace/model/auth behavior.
+
+- `src/runtime-state.js`
+  - In-memory runtime overrides and temporary card state.
+  - Changes can invalidate card callbacks or real Codex command options.
 
 - `src/feishu/events.js`
   - Controls access to local Codex execution.
@@ -41,6 +50,10 @@ These areas affect multiple modules or user-visible behavior.
 
 - `src/codex/runner.js`
   - External process behavior can hang, timeout incorrectly, or run wrong args.
+
+- `.github/workflows/test.yml`
+  - CI signal for every push and pull request.
+  - Keep aligned with `package.json` scripts and Node version assumptions.
 
 - `README.md` and `docs/agent-installation.md`
   - Setup docs directly influence whether users leak secrets or miss Feishu subscriptions.
@@ -63,7 +76,7 @@ Do not edit these concurrently without explicit ownership.
 
 - `src/server.js#processCodexTask`
   - Shared by WS and HTTP paths.
-  - Controls ack, progress, Codex run, final reply, and failure reporting.
+  - Controls built-in commands, ack, progress, Codex run, final reply, card state, and failure reporting.
 
 - `src/feishu/events.js#extractCodexTask`
   - Security boundary for who can trigger Codex.
@@ -79,11 +92,15 @@ Do not edit these concurrently without explicit ownership.
 - Future session/interaction state files
   - Once added, these will become coordination-critical because cards, Codex processes, and retries will depend on them.
 
+- Current `src/runtime-state.js` if adding durable storage or multi-user session semantics.
+  - This would change the meaning of existing runtime commands and card callbacks.
+
 Expected verification:
 
 - full `npm test`
 - relevant manual smoke test if `.env` is configured
 - `npm audit --json` for dependency changes
+- CI workflow review if `.github/workflows/test.yml` changed
 - documented decision update in `docs/agent-context/decisions.md` when behavior changes
 
 ## Files That Must Stay Untracked

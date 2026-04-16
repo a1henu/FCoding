@@ -9,6 +9,7 @@
 - `config.test.js`: env parsing and defaults.
 - `dotenv.test.js`: local `.env` loader behavior.
 - `codex-runner.test.js`: child process execution, failures, timeout, truncation.
+- `runtime-state.test.js`: runtime workspace/model/auth overrides and card state.
 - `feishu-client.test.js`: outbound API calls with mocked fetch.
 - `feishu-crypto.test.js`: HTTP callback signature/decryption.
 - `feishu-events.test.js`: payload parsing, mention stripping, allowlists, dedupe.
@@ -38,6 +39,7 @@ Tests import source modules directly. Fakes are preferred over live Feishu, live
 - For test-only changes: run the changed test file and `npm test`.
 - For source changes: run targeted tests from `docs/agent-context/testing-playbook.md`, then `npm test`.
 - For docs-only changes: `npm test` is still preferred before commit because this repo is small.
+- GitHub Actions runs `npm ci` and `npm test` on push and pull request via `.github/workflows/test.yml`; keep local and CI expectations aligned.
 
 ## Read Before Editing
 

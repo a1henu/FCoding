@@ -13,6 +13,8 @@ git status --short
 
 `npm audit --json` is not required for every small docs edit, but run it after dependency or package-lock changes.
 
+GitHub Actions runs `npm ci` and `npm test` on push and pull request via `.github/workflows/test.yml`.
+
 ## Docs-Only Changes
 
 Examples:
@@ -82,6 +84,7 @@ Examples:
 - tenant token cache
 - reply text payload shape
 - interactive card reply payload shape
+- interactive card update payload shape
 - error handling for Feishu API codes
 
 Minimum verification:
@@ -130,6 +133,8 @@ If Feishu shows `200340`, check subscription to `card.action.trigger` before cha
 Examples:
 
 - new status cards
+- command result cards
+- task result cards with output expand/collapse
 - permission buttons
 - choice cards
 - callback values
@@ -172,6 +177,31 @@ Check:
 - timeout
 - large output truncation
 - prompt remains the final child process argument unless intentionally changed
+- runtime-state options still append model/API provider args before the prompt
+
+## Runtime Commands And State
+
+Examples:
+
+- `src/commands.js`
+- `src/runtime-state.js`
+- workspace/model/auth command behavior
+- output card state and TTL
+
+Minimum verification:
+
+```bash
+node --test test/runtime-state.test.js test/server.test.js test/feishu-ws.test.js
+npm test
+```
+
+Check:
+
+- built-in commands bypass Codex execution
+- workspace paths are resolved and verified before switching
+- model override appends expected Codex args
+- API auth mode injects provider config and env key correctly
+- card state can retrieve stored task output for expand/collapse
 
 ## Shared Task Orchestration
 
@@ -181,6 +211,7 @@ Examples:
 - ack messages
 - progress replies
 - final reply wording
+- command handling before Codex execution
 - error reporting
 
 Minimum verification:
@@ -196,6 +227,7 @@ Check:
 - progress timer stops on success and failure
 - failures still attempt a Feishu reply
 - duplicate events do not run Codex twice
+- built-in commands do not start Codex
 
 ## HTTP Webhook Mode
 
@@ -226,6 +258,7 @@ Examples:
 
 - `package.json`
 - `package-lock.json`
+- `.github/workflows/test.yml`
 - Node version requirement
 - SDK upgrade
 
@@ -238,3 +271,5 @@ npm audit --json
 ```
 
 If upgrading `@larksuiteoapi/node-sdk`, inspect whether `patchWsClientCardCallbacks` is still needed. The patch depends on SDK internals.
+
+For CI workflow changes, inspect the YAML and confirm it still runs `npm ci` before `npm test` unless intentionally changing the workflow contract.

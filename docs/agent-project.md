@@ -9,9 +9,10 @@ FCoding bridges Feishu bot messages to local Codex CLI tasks:
 1. Feishu delivers a subscribed event to this service.
 2. FCoding validates and normalizes the event.
 3. FCoding extracts a Codex prompt from the message.
-4. FCoding acknowledges the message quickly.
-5. Codex runs locally in `CODEX_WORKDIR`.
-6. The bot replies with progress updates and the final result.
+4. FCoding handles built-in commands locally, or acknowledges a Codex task quickly.
+5. Runtime state can override workspace, model, and auth behavior.
+6. Codex runs locally in the selected workspace.
+7. The bot replies with interactive progress/result cards.
 
 The default runtime is Feishu long connection through `@larksuiteoapi/node-sdk`. HTTP webhook mode is still available for deployments with a public HTTPS callback URL.
 
@@ -28,6 +29,15 @@ The default runtime is Feishu long connection through `@larksuiteoapi/node-sdk`.
   - Parses environment variables.
   - Owns defaults for Codex command, args, timeout, output limits, and Feishu mode.
 
+- `src/commands.js`
+  - Handles built-in bot commands before Codex is invoked.
+  - Current commands include help, status, workspace, model, and login/auth configuration.
+
+- `src/runtime-state.js`
+  - Stores process-local workspace/model/auth overrides.
+  - Stores temporary card state for output expand/collapse actions.
+  - Builds final Codex run options from base config plus runtime overrides.
+
 - `src/dotenv.js`
   - Lightweight local `.env` loader.
   - Does not overwrite variables already exported by the shell.
@@ -38,6 +48,7 @@ The default runtime is Feishu long connection through `@larksuiteoapi/node-sdk`.
   - Fetches and caches tenant access tokens.
   - Sends text replies.
   - Sends interactive card replies.
+  - Updates existing interactive card messages.
   - Splits long replies where needed.
 
 - `src/feishu/events.js`
@@ -54,14 +65,14 @@ The default runtime is Feishu long connection through `@larksuiteoapi/node-sdk`.
   - Mostly relevant to HTTP webhook mode.
 
 - `src/feishu/cards.js`
-  - Builds interactive cards used by smoke tests and card callback responses.
+  - Builds callback test cards, command result cards, status cards, and task result cards with output expand/collapse buttons.
 
 - `src/feishu/ws.js`
   - Starts the official Feishu `WSClient`.
   - Creates the normal `EventDispatcher`.
   - Creates a `CardActionHandler` for card callbacks.
   - Routes `im.message.receive_v1` to Codex task processing.
-  - Routes `card.action.trigger` to card action handling.
+  - Routes `card.action.trigger` to card action handling, including output expand/collapse callbacks.
   - Patches the SDK client to dispatch websocket frames with `type=card`, because the installed Node SDK only dispatches normal event frames by default.
 
 ## HTTP Mode
@@ -93,6 +104,39 @@ codex exec --skip-git-repo-check --sandbox workspace-write <prompt>
 
 Do not reintroduce unsupported flags such as `--ask-for-approval` unless the installed Codex CLI supports them. Check `codex exec --help` before changing defaults.
 
+Runtime state may append:
+
+- `-m <model>` when `codex model set <name>` was used.
+- `-c model_provider=...` and related provider settings when API auth mode is active.
+- an API key environment variable if it is available in process env or staged in memory.
+
+## Built-In Bot Commands
+
+After `BOT_TRIGGER_PREFIX` is stripped, these prompts are handled before Codex execution:
+
+```text
+help
+status
+workspace
+workspace set <path>
+workspace reset
+model
+model set <name>
+model clear
+login
+login status
+login use chatgpt
+login use api
+login base-url set <url>
+login base-url reset
+login key-env set <ENV_VAR>
+login key-env reset
+```
+
+With the default prefix, users send messages such as `codex status` or `codex workspace set /repo`.
+
+Command behavior lives in `src/commands.js`; state lives in `src/runtime-state.js`; tests live in `test/server.test.js` and `test/runtime-state.test.js`.
+
 ## Message Flow In Long Connection Mode
 
 1. `startWsEventClient()` starts `lark.WSClient`.
@@ -101,8 +145,10 @@ Do not reintroduce unsupported flags such as `--ask-for-approval` unless the ins
 4. `im.message.receive_v1` is normalized with `normalizeWsMessageEvent()`.
 5. `extractCodexTask()` filters mentions, prefixes, allowlists, and empty prompts.
 6. The handler returns quickly and schedules `processCodexTask()` with `setImmediate()`.
-7. `processCodexTask()` sends an ack, starts periodic progress replies, runs Codex, stops progress, and replies with the result.
-8. `card.action.trigger` is routed to the SDK `CardActionHandler`.
+7. `processCodexTask()` first asks `handleBotCommand()` whether the prompt is an FCoding command.
+8. For Codex tasks, `processCodexTask()` sends an accepted card, starts periodic progress cards, runs Codex, stops progress, stores result card state, and replies with a collapsed result card.
+9. `card.action.trigger` is routed to the SDK `CardActionHandler`.
+10. Expand/collapse card buttons use runtime card state to rebuild task result cards.
 
 ## Callback Test Command
 
@@ -126,6 +172,7 @@ If Feishu shows `200340`, first check Feishu subscriptions. The app must subscri
 - `test/config.test.js`: config parsing.
 - `test/dotenv.test.js`: local `.env` loading.
 - `test/codex-runner.test.js`: Codex process execution and formatting.
+- `test/runtime-state.test.js`: runtime workspace/model/auth options and card state.
 - `test/feishu-client.test.js`: Feishu API client behavior.
 - `test/feishu-crypto.test.js`: signature and encryption logic.
 - `test/feishu-events.test.js`: event parsing, prompt extraction, allowlists, dedupe.
@@ -147,12 +194,16 @@ npm test
 - When touching Feishu event parsing, update both long connection and HTTP tests if behavior overlaps.
 - When touching Codex command execution, test success, failure, timeout, and output truncation.
 - When touching callback cards, test both payload shape and long-connection callback dispatch.
+- When touching runtime commands or state, test command handling, runtime run options, and card callback behavior.
 - If a behavior depends on current Feishu or Codex SDK details, inspect the installed package or official docs before changing it.
 
 ## Known Design Choices
 
 - Event handlers return quickly to avoid Feishu callback retries.
 - Codex runs asynchronously after the Feishu event is accepted.
-- Long-running Codex tasks send periodic progress replies.
+- Long-running Codex tasks send periodic progress cards.
+- Built-in commands intentionally bypass Codex execution.
+- Runtime state is process-local and resets on restart.
+- GitHub Actions runs `npm ci` and `npm test` on push and pull request.
 - The service is dependency-light and uses Node's built-in test runner.
 - The app is intentionally local-first; production hardening should focus on process supervision, allowlists, and workspace isolation.

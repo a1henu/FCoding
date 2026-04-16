@@ -11,6 +11,7 @@ Feishu long connection
   -> src/feishu/ws.js
   -> src/feishu/events.js
   -> src/server.js#processCodexTask
+  -> src/commands.js or src/runtime-state.js when prompt is a built-in command
   -> src/codex/runner.js
   -> src/feishu/client.js
   -> Feishu message reply API
@@ -37,9 +38,10 @@ The two inbound modes share event parsing and Codex task processing, but WS mode
 1. `loadDotEnv()` loads local `.env` without overwriting exported shell env.
 2. `loadConfig()` parses env vars and defaults.
 3. `new FeishuClient(config.feishu)` prepares outbound Feishu calls.
-4. `FEISHU_EVENT_MODE=ws` starts `startWsEventClient()`.
-5. `FEISHU_EVENT_MODE=http` starts `createServer()`.
-6. SIGINT/SIGTERM closes the WS client or HTTP server.
+4. `createRuntimeState({ config })` creates in-memory workspace/model/auth/card state for this process.
+5. `FEISHU_EVENT_MODE=ws` starts `startWsEventClient()`.
+6. `FEISHU_EVENT_MODE=http` starts `createServer()`.
+7. SIGINT/SIGTERM closes the WS client or HTTP server.
 
 Any change to startup must preserve both modes unless intentionally removing one.
 
@@ -67,7 +69,8 @@ For card callbacks:
 1. Feishu sends `card.action.trigger` only if the app subscribed to that callback.
 2. The dispatcher routes card payloads to `CardActionHandler`.
 3. `createCardActionTriggerHandler()` reads `data.action.value`.
-4. The callback test returns a card from `buildCallbackReceivedCard()`.
+4. `callback_test` returns a card from `buildCallbackReceivedCard()`.
+5. `expand_output` and `collapse_output` load a stored `task_result` card state from `runtimeState` and rebuild the task status card.
 
 Important coupling: card callback smoke tests depend on `src/feishu/cards.js`, `src/feishu/ws.js`, Feishu console subscription to `card.action.trigger`, and the SDK patch for `type=card` frames.
 
@@ -87,24 +90,29 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 
 `processCodexTask()` in `src/server.js` is shared by both inbound modes:
 
-1. Optionally sends `Received. Codex is working on it.`
-2. Starts periodic progress replies through `startProgressReplies()`.
-3. Calls the configured Codex runner.
-4. Stops progress replies.
-5. Sends formatted success/failure text.
-6. On pre-completion errors, tries to report failure to Feishu.
+1. Calls `handleBotCommand()` before running Codex.
+2. If a built-in command is handled, sends that command's result card and returns.
+3. Otherwise sends an accepted interactive card when `FEISHU_SEND_ACK=true`.
+4. Starts periodic progress cards through `startProgressReplies()`.
+5. Calls the configured Codex runner with `runtimeState.buildCodexRunOptions(config.codex)`.
+6. Stops progress replies.
+7. Stores final task output in runtime card state and sends a collapsed task status card.
+8. On pre-completion errors, tries to report failure with an interactive card.
 
 `src/codex/runner.js` executes the external process:
 
 - command defaults to `codex`
 - args default to `exec --skip-git-repo-check --sandbox workspace-write`
 - prompt is appended as the final argument
+- runtime state may override `cwd`, append `-m <model>`, or append `-c` provider configuration for API auth mode
 - `shell: false`
 - timeout sends SIGTERM, then SIGKILL after 5 seconds
 - combined stdout/stderr is truncated from the middle
 
 ## Module Relationships
 
+- `commands.js` handles built-in runtime commands before Codex is invoked.
+- `runtime-state.js` stores in-memory workspace/model/auth settings and temporary card state.
 - `config.js` influences almost every runtime module. It is the only place env defaults should be introduced.
 - `events.js` is the security gate for who can run Codex.
 - `server.js` is both HTTP runtime and shared task orchestrator.
@@ -117,8 +125,11 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - `extractCodexTask()` expects text message payloads with `message.message_type === 'text'` and JSON content containing `text`.
 - Empty allowlists currently mean "allow all" for that identifier type.
 - `BOT_TRIGGER_PREFIX=codex` strips exactly the prefix after mentions are removed.
-- `processCodexTask()` assumes `feishuClient.replyText(messageId, text)` returns a promise.
+- Current task orchestration now primarily uses `replyInteractiveCard(messageId, card)` for ack/progress/final/error replies.
+- Built-in commands use `task.prompt` after `BOT_TRIGGER_PREFIX` removal, so users send `codex status` but `handleBotCommand()` receives `status`.
 - `replyInteractiveCard()` sends `msg_type: interactive` and `content: JSON.stringify(card)`.
+- `updateInteractiveCard()` sends `PATCH /im/v1/messages/:message_id`; it is implemented and tested, but current expand/collapse callbacks return replacement cards through callback response rather than calling the client method.
+- Runtime card state is in memory and expires after 24 hours by default. Restarting the process invalidates old output expand/collapse cards.
 - `patchWsClientCardCallbacks()` relies on installed SDK internals: `wsClient.handleEventData`, `wsClient.dataCache.mergeData`, `wsClient.eventDispatcher`, and `wsClient.sendMessage`.
 - Feishu card callbacks require console subscription to `card.action.trigger`. A healthy long-connection socket is not sufficient.
 
@@ -128,6 +139,8 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - Change Feishu message parsing: start in `src/feishu/events.js`, then `test/feishu-events.test.js`, `test/server.test.js`, and `test/feishu-ws.test.js`.
 - Change Feishu outbound reply behavior: start in `src/feishu/client.js`, then `test/feishu-client.test.js`.
 - Change long connection/card callbacks: start in `src/feishu/ws.js`, `src/feishu/cards.js`, `test/feishu-ws.test.js`, and `test/feishu-cards.test.js`.
+- Change built-in commands: start in `src/commands.js`, `src/runtime-state.js`, `src/server.js`, `test/runtime-state.test.js`, and `test/server.test.js`.
 - Change Codex execution: start in `src/codex/runner.js`, then `test/codex-runner.test.js`.
 - Change progress/ack/final reply orchestration: start in `src/server.js`, then `test/server.test.js` and `test/feishu-ws.test.js`.
+- Change CI: start in `.github/workflows/test.yml`, then verify with `npm test` locally and inspect `package.json` scripts.
 - Change installation docs: start in `README.md`, `docs/agent-installation.md`, `.env.example`, and `src/config.js`.

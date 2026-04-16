@@ -20,13 +20,13 @@ Evidence seen: Current defaults use `codex exec --skip-git-repo-check --sandbox 
 
 Suggested next step: Inspect `codex exec --help`, `codex exec --json`, `codex app-server --help`, and `codex exec-server --help` in the target environment. Document the selected protocol before implementation.
 
-## 3. What is the long-term state store for sessions and card nonces?
+## 3. What is the long-term state store for sessions and runtime state?
 
-Question: Should FCoding store session state in memory, files, SQLite, Redis, or another backend?
+Question: Should FCoding keep workspace/model/auth overrides and card state in memory, files, SQLite, Redis, or another backend?
 
-Why it matters: Interactive cards require mapping a Feishu click back to a running Codex process/session. In-memory state is simple but lost on restart.
+Why it matters: Interactive cards now map expand/collapse clicks back to stored task results, and runtime commands can change workspace/model/auth settings. In-memory state is simple but lost on restart.
 
-Evidence seen: Current project has no database or persistent state. `EventDeduper` is in-memory only.
+Evidence seen: `src/runtime-state.js` stores state in memory. `EventDeduper` is also in-memory.
 
 Suggested next step: For local single-user use, start with in-memory state plus explicit docs. Revisit persistence before multi-user or long-running production use.
 
@@ -79,3 +79,13 @@ Why it matters: Maintaining both inbound modes increases test and design surface
 Evidence seen: HTTP mode is tested and implemented, but the user's target environment uses long connection due no public HTTPS service.
 
 Suggested next step: Keep HTTP tests for now. Reassess after interactive WS features mature.
+
+## 9. Should GitHub Actions include audit or multiple Node versions?
+
+Question: Should CI continue to run only Node 20 `npm test`, or should it add `npm audit`, Node 24, linting, or workflow dispatch?
+
+Why it matters: Current CI is intentionally minimal and fast. More checks improve confidence but may add noise or fail due external advisory churn.
+
+Evidence seen: `.github/workflows/test.yml` runs Node 20, `npm ci`, and `npm test` on push and pull request.
+
+Suggested next step: Keep minimal CI until dependency or runtime compatibility needs increase; update `testing-playbook.md` if checks are added.

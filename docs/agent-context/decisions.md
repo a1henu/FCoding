@@ -44,11 +44,31 @@ Implication: Production deployments should set at least one allowlist. Changing 
 
 Status: decided by current implementation
 
-Reason: `runCodexTask()` spawns a child process, captures stdout/stderr, and resolves only on process close/error/timeout. It does not parse streaming JSON events or write to stdin.
+Reason: `runCodexTask()` spawns a child process, captures stdout/stderr, and resolves only on process close/error/timeout. Runtime commands can alter options before the run, but the runner still does not parse streaming JSON events or write to stdin.
 
 Evidence: `src/codex/runner.js`.
 
 Implication: Feishu choice/permission interactions require a new protocol or a different Codex integration path; do not bolt UI cards onto the current runner without designing the process interaction.
+
+## Built-In Commands Are Handled Before Codex
+
+Status: decided by current implementation
+
+Reason: `processCodexTask()` calls `handleBotCommand()` before ack/progress/Codex execution.
+
+Evidence: `src/server.js`, `src/commands.js`, `test/server.test.js`.
+
+Implication: User messages such as `codex status` do not run Codex. Command names are part of the user-facing protocol and need tests/docs when changed.
+
+## Runtime State Is In Memory
+
+Status: decided by current implementation
+
+Reason: `createRuntimeState()` stores workspace/model/auth overrides and card state in process memory.
+
+Evidence: `src/runtime-state.js`, `test/runtime-state.test.js`.
+
+Implication: Restarting the service resets workspace/model/auth overrides and invalidates old expand/collapse output cards. This is acceptable for the current local-first design but must be revisited for durable multi-user sessions.
 
 ## Codex Prompt Is Appended As Final Argument
 
@@ -99,6 +119,16 @@ Reason: Feishu callbacks can retry or show user-facing errors when handlers bloc
 Evidence: WS path uses `setImmediate()` before `processCodexTask`; HTTP path sends response before scheduling Codex.
 
 Implication: Do not await long Codex runs inside Feishu event callback handlers.
+
+## CI Runs The Test Suite On Push And Pull Request
+
+Status: decided
+
+Reason: `.github/workflows/test.yml` uses `actions/checkout@v4`, `actions/setup-node@v4` with Node 20 and npm cache, `npm ci`, and `npm test`.
+
+Evidence: `.github/workflows/test.yml`.
+
+Implication: Keep `package-lock.json` committed and keep `npm test` as the authoritative test command unless the workflow is updated.
 
 ## Tests Use Node's Built-In Test Runner
 

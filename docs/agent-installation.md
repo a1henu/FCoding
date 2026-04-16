@@ -4,7 +4,7 @@ This document is written for an AI coding agent helping a human install and conf
 
 ## Objective
 
-Set up FCoding so a Feishu bot can receive direct messages through Feishu long connection, run local Codex CLI tasks, send progress/result replies, and receive interactive card callbacks.
+Set up FCoding so a Feishu bot can receive direct messages through Feishu long connection, run local Codex CLI tasks, send interactive progress/result cards, handle runtime commands, and receive interactive card callbacks.
 
 ## Ground Rules
 
@@ -102,6 +102,8 @@ Run tests:
 npm test
 ```
 
+GitHub Actions also runs `npm ci` and `npm test` on push and pull request through `.github/workflows/test.yml`.
+
 Start the service:
 
 ```bash
@@ -124,13 +126,25 @@ Keep the process running. In the Feishu console, click the long-connection statu
 Ask the user to send a direct message to the bot:
 
 ```text
+codex status
+```
+
+Expected:
+
+- The bot replies with an `FCoding status` card.
+- The card shows workspace, model, auth mode, and Codex login status.
+
+Then run a real Codex task:
+
+```text
 codex echo hello
 ```
 
 Expected:
 
-- The bot replies `Received. Codex is working on it.`
-- The bot later replies with Codex output.
+- The bot replies with an accepted card.
+- The bot later replies with a task result card.
+- If output is long enough, the card can be expanded/collapsed.
 
 Then test card callbacks:
 
@@ -152,6 +166,26 @@ If the user gets `200340`:
 - Confirm the user clicked a newly generated card, not an older card from before the subscription.
 - Check whether logs show `card.action.trigger`. If not, the callback is not reaching FCoding.
 
+Useful runtime commands after setup:
+
+```text
+codex help
+codex status
+codex workspace
+codex workspace set <path>
+codex workspace reset
+codex model
+codex model set <name>
+codex model clear
+codex login
+codex login use chatgpt
+codex login use api
+codex login base-url set <url>
+codex login key-env set <ENV_VAR>
+```
+
+These commands change in-memory runtime state only. Restarting the service resets workspace/model/auth overrides and expires old result-card expand/collapse state.
+
 ## Production Notes
 
 - Run the process under a dedicated OS user.
@@ -170,6 +204,8 @@ npm audit --json
 git diff --check
 git status --short
 ```
+
+CI runs `npm test` automatically after push, but do not rely on CI as the first verification; run tests locally before committing.
 
 Confirm no secrets are staged:
 

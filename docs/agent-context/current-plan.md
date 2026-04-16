@@ -8,11 +8,14 @@ The repository has a working baseline:
 - Direct message flow works through `im.message.receive_v1`.
 - Card callback smoke test works after subscribing `card.action.trigger`.
 - HTTP webhook mode has tests but is not the primary deployment path.
-- Codex execution is non-interactive and process-based.
-- Tests are fast and local: currently 39 Node tests.
+- Codex execution is still process-based, but runtime options can now be adjusted from Feishu commands before a task runs.
+- Built-in commands now cover help/status/workspace/model/login configuration flows.
+- Final task results are sent as cards with output expand/collapse callbacks backed by in-memory runtime card state.
+- GitHub Actions runs `npm ci` and `npm test` on push and pull request.
+- Tests are fast and local: currently 48 Node tests.
 - Agent-facing installation and project overview docs exist.
 
-The next phase is better suited to incremental feature work with focused tests, not broad refactoring. The highest-value feature area is interactive Codex sessions over Feishu cards, but that should be implemented in small slices.
+The next phase is better suited to tightening runtime command behavior and interaction state before deeper Codex streaming/permission work. Avoid broad refactors until command/state contracts are stable.
 
 ## Suggested Parallel Work Lanes
 
@@ -27,7 +30,7 @@ Owner scope:
 Goal:
 
 - Understand how to capture Codex CLI progress/events or interactive prompts.
-- Avoid changing Feishu card UI in the same branch.
+- Keep current runtime command overrides working while exploring richer Codex protocols.
 
 Coordination:
 
@@ -42,7 +45,7 @@ Owner scope:
 
 Goal:
 
-- Build reusable card payloads for status, choices, permissions, success, and failure.
+- Extend existing reusable card payloads for choices, permissions, and richer status.
 - Keep card builders pure and testable.
 
 Coordination:
@@ -58,8 +61,8 @@ Owner scope:
 
 Goal:
 
-- Add nonce/session routing for card actions.
-- Add dedupe for repeated card clicks or Feishu retries.
+- Build on existing card state routing for output expand/collapse.
+- Add dedupe for repeated card clicks or Feishu retries if needed.
 
 Coordination:
 
@@ -78,6 +81,7 @@ Goal:
 
 - Make allowlist setup clearer and safer for production.
 - Possibly support first-run ID discovery without leaving allowlists open.
+- Review runtime commands that can switch workspace/model/auth settings.
 
 Coordination:
 
@@ -94,6 +98,7 @@ Owner scope:
 Goal:
 
 - Add process manager examples, troubleshooting, and release checklist.
+- Keep GitHub Actions behavior documented when workflow changes.
 
 Coordination:
 
@@ -103,7 +108,9 @@ Coordination:
 
 - Changes to `src/feishu/ws.js` callback dispatch and SDK patch.
 - Changes to `src/server.js#processCodexTask`.
+- Changes to `src/commands.js` and `src/runtime-state.js` command/state contracts.
 - Changes to `src/config.js` defaults and `.env.example`.
+- Changes to `.github/workflows/test.yml` when package scripts or Node version assumptions change.
 - Changes to package dependencies or Node version assumptions.
 - Any change that alters the message-to-Codex prompt contract.
 
@@ -114,9 +121,10 @@ These areas create cross-module behavior and can easily invalidate other agents'
 For a multi-agent session:
 
 1. One integration owner controls `src/feishu/ws.js` and task orchestration.
-2. One Codex owner controls `src/codex/`.
-3. One card/UI owner controls `src/feishu/cards.js`.
-4. One docs/test owner updates docs and broad test coverage after the interfaces settle.
+2. One command/state owner controls `src/commands.js` and `src/runtime-state.js`.
+3. One Codex owner controls `src/codex/`.
+4. One card/UI owner controls `src/feishu/cards.js`.
+5. One docs/test owner updates docs, CI notes, and broad test coverage after interfaces settle.
 
 Use explicit file ownership in prompts. Avoid assigning two workers to the same source file.
 
@@ -130,8 +138,8 @@ Use explicit file ownership in prompts. Avoid assigning two workers to the same 
 
 ## Near-Term Priorities
 
-1. Add session/nonce state for card actions and retry-safe dedupe.
-2. Define an internal representation for Codex progress, choices, and permission prompts.
-3. Replace simple periodic text progress with richer status updates only after the internal event shape is tested.
+1. Document and harden built-in runtime commands, especially workspace and auth switching.
+2. Add retry-safe behavior for repeated card actions if Feishu retry/double-click becomes a problem.
+3. Define an internal representation for true Codex streaming, choices, and permission prompts.
 4. Harden access control defaults or first-run setup guidance before wider deployment.
-5. Add operational docs for running the service continuously.
+5. Add operational docs for running the service continuously and observing CI status.
