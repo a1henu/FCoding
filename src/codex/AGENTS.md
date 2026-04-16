@@ -6,7 +6,7 @@ This directory owns the boundary between FCoding and the local Codex CLI process
 
 ## Key Entry File
 
-- `runner.js`: spawns Codex, appends the prompt, captures stdout/stderr, handles abort cancellation, enforces timeout, truncates output, and formats final Feishu reply text.
+- `runner.js`: spawns Codex with stdin ignored, appends the prompt, captures stdout/stderr, handles abort cancellation, enforces timeout, truncates output, and formats final Feishu reply text.
 
 ## Internal Dependencies
 
@@ -25,6 +25,7 @@ This directory owns the boundary between FCoding and the local Codex CLI process
 ## High-Risk Changes
 
 - Changing `spawn` options; shell execution is currently disabled with `shell: false`.
+- Changing stdin handling; Codex CLI waits for extra piped input if stdin is left open.
 - Changing argument order; current contract is `[...CODEX_ARGS, prompt]`.
 - Changing how runtime-state appends `-m` model args; this affects real Codex invocation.
 - Changing timeout kill behavior; current flow sends `SIGTERM` then `SIGKILL` after 5 seconds.

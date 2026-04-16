@@ -100,6 +100,16 @@ Evidence: `src/codex/runner.js`; `test/codex-runner.test.js`.
 
 Implication: `CODEX_ARGS` should contain flags before the prompt. Changing order can break Codex CLI invocation.
 
+## Codex Runner Ignores Child Stdin
+
+Status: decided by current implementation
+
+Reason: `codex exec` treats open piped stdin as additional prompt input and waits for EOF. FCoding never writes to child stdin, so it must be closed/ignored when spawning Codex.
+
+Evidence: `src/codex/runner.js` sets `stdio: ['ignore', 'pipe', 'pipe']`; `test/codex-runner.test.js` covers a child command that reads stdin to EOF.
+
+Implication: Do not remove stdin ignore unless replacing the runner with an explicit streaming protocol that owns stdin writes and EOF behavior.
+
 ## Unsupported Codex Approval Flag Was Removed
 
 Status: decided

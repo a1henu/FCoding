@@ -92,6 +92,7 @@ HTTP mode is optional. The default user journey should use long connection becau
 
 - `src/codex/runner.js`
   - Spawns the configured Codex command.
+  - Ignores child stdin so `codex exec` does not wait forever for extra piped input.
   - Appends the extracted prompt.
   - Captures stdout/stderr.
   - Accepts `AbortSignal` cancellation and terminates the child process.
@@ -191,7 +192,7 @@ npm test
 - Preserve `.env` secrecy.
 - Do not commit local runtime files such as `.env`, `.env.*`, `.codex`, or `node_modules`.
 - When touching Feishu event parsing, update both long connection and HTTP tests if behavior overlaps.
-- When touching Codex command execution, test success, failure, timeout, cancellation, and output truncation.
+- When touching Codex command execution, test success, failure, stdin EOF behavior, timeout, cancellation, and output truncation.
 - When touching callback cards, test both payload shape and long-connection callback dispatch.
 - When touching runtime commands or state, test command handling, runtime run options, and card callback behavior.
 - If a behavior depends on current Feishu or Codex SDK details, inspect the installed package or official docs before changing it.

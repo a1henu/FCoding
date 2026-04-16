@@ -13,7 +13,7 @@ The repository has a working baseline:
 - Running task cards include a Cancel button backed by `card.action.trigger` and `AbortSignal` cancellation in the Codex runner.
 - Final task results are sent as cards with output expand/collapse callbacks backed by in-memory runtime card state.
 - GitHub Actions runs `npm ci` and `npm test` on push and pull request.
-- Tests are fast and local: currently 56 Node tests.
+- Tests are fast and local: currently 57 Node tests.
 - Agent-facing installation and project overview docs exist.
 
 The next phase is better suited to tightening runtime command behavior and interaction state before deeper Codex streaming/permission work. Avoid broad refactors until command/state contracts are stable.

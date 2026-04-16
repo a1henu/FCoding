@@ -177,6 +177,7 @@ Check:
 - success result
 - non-zero exit
 - spawn error
+- child stdin is closed/ignored so Codex does not wait for additional piped input
 - timeout
 - abort cancellation
 - large output truncation

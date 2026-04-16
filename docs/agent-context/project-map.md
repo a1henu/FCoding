@@ -109,6 +109,7 @@ HTTP mode is not the default, but tests cover URL verification, dedupe, and sign
 - prompt is appended as the final argument
 - runtime state may override `cwd` or append `-m <model>`
 - `shell: false`
+- stdin is ignored so `codex exec` does not wait forever for additional piped input
 - timeout sends SIGTERM, then SIGKILL after 5 seconds
 - cancellation through `AbortSignal` sends SIGTERM, then SIGKILL after 5 seconds
 - combined stdout/stderr is truncated from the middle

@@ -50,6 +50,7 @@ export async function runCodexTask({
     const child = spawn(command, childArgs, {
       cwd,
       env,
+      stdio: ['ignore', 'pipe', 'pipe'],
       shell: false,
       windowsHide: true
     });

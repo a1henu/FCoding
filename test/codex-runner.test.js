@@ -5,8 +5,8 @@ import { formatCodexResult, runCodexTask, truncateText } from '../src/codex/runn
 test('runs a command with the prompt appended as an argument', async () => {
   const result = await runCodexTask({
     prompt: 'fix tests',
-    command: process.execPath,
-    args: ['-e', 'process.stdout.write(process.argv.at(-1))'],
+    command: '/usr/bin/printf',
+    args: ['%s'],
     timeoutMs: 1000
   });
 
@@ -17,14 +17,30 @@ test('runs a command with the prompt appended as an argument', async () => {
 test('captures failures and stderr', async () => {
   const result = await runCodexTask({
     prompt: 'ignored',
-    command: process.execPath,
-    args: ['-e', 'console.error("bad"); process.exit(2)'],
+    command: '/bin/sh',
+    args: ['-c', 'echo bad >&2; exit 2'],
     timeoutMs: 1000
   });
 
   assert.equal(result.ok, false);
   assert.equal(result.exitCode, 2);
   assert.match(result.output, /bad/);
+});
+
+test('closes stdin so codex does not wait for additional piped input', async () => {
+  const result = await runCodexTask({
+    prompt: 'fix stdin',
+    command: '/bin/sh',
+    args: [
+      '-c',
+      'input=$(cat); printf "done:%s:%s" "$1" "${#input}"',
+      'sh'
+    ],
+    timeoutMs: 1000
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.output, 'done:fix stdin:0');
 });
 
 test('times out long running commands', async () => {
