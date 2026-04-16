@@ -1,6 +1,9 @@
+import { loadDotEnv } from './dotenv.js';
 import { loadConfig } from './config.js';
 import { FeishuClient } from './feishu/client.js';
 import { createServer } from './server.js';
+
+loadDotEnv();
 
 const config = loadConfig();
 const feishuClient = new FeishuClient(config.feishu);

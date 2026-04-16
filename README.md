@@ -28,7 +28,7 @@ Useful API references:
 
 ## Configuration
 
-Copy `.env.example` values into your deployment environment. This project does not load `.env` automatically, so export the variables in your shell, process manager, container, or systemd unit.
+Copy `.env.example` to `.env` for local development. `npm start` loads `.env` automatically without overwriting variables already exported by your shell. `.env` and `.env.*` are ignored by git, while `.env.example` stays tracked as a safe template.
 
 Important variables:
 
